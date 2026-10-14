@@ -14,6 +14,7 @@ import type { PhotoSource } from '@/types/report';
 export default function ReportScreen() {
   const { draft, resetDraft, setPhoto } = useReportDraft();
   const [pickingSource, setPickingSource] = useState<PhotoSource | null>(null);
+  const draftLocked = draft.status === 'submitting' || draft.status === 'submitted';
 
   function showPermissionAlert(source: PhotoSource, canAskAgain: boolean) {
     const target = source === 'camera' ? 'kamera' : 'galeri';
@@ -47,7 +48,7 @@ export default function ReportScreen() {
   }
 
   async function pickPhoto(source: PhotoSource) {
-    if (pickingSource) return;
+    if (pickingSource || draftLocked) return;
     if (!(await confirmPhotoChange())) return;
     setPickingSource(source);
 
@@ -88,14 +89,14 @@ export default function ReportScreen() {
           <PrimaryButton
             label={draft.photoUri ? 'Yeni Fotoğraf Çek' : 'Fotoğraf Çek'}
             loading={pickingSource === 'camera'}
-            disabled={pickingSource !== null}
+            disabled={pickingSource !== null || draftLocked}
             onPress={() => void pickPhoto('camera')}
           />
           <PrimaryButton
             label={draft.photoUri ? 'Galeriden Değiştir' : 'Galeriden Seç'}
             variant="secondary"
             loading={pickingSource === 'library'}
-            disabled={pickingSource !== null}
+            disabled={pickingSource !== null || draftLocked}
             onPress={() => void pickPhoto('library')}
           />
         </View>
@@ -105,7 +106,7 @@ export default function ReportScreen() {
             <Image source={{ uri: draft.photoUri }} style={styles.preview} contentFit="cover" accessibilityLabel="Seçilen sorun fotoğrafı" />
             <View style={styles.previewMeta}>
               <Text style={styles.sourceText}>{draft.photoSource === 'camera' ? 'Kamera ile çekildi' : 'Galeriden seçildi'}</Text>
-              <Pressable accessibilityRole="button" disabled={pickingSource !== null} onPress={() => void removePhoto()} hitSlop={8}>
+              <Pressable accessibilityRole="button" disabled={pickingSource !== null || draftLocked} onPress={() => void removePhoto()} hitSlop={8}>
                 <Text style={styles.removeText}>Fotoğrafı Kaldır</Text>
               </Pressable>
             </View>
@@ -114,7 +115,7 @@ export default function ReportScreen() {
       </View>
 
       {draft.photoUri ? (
-        <PrimaryButton label="Fotoğrafı Analiz Et" disabled={pickingSource !== null} onPress={() => router.push('/report/analysis')} />
+        <PrimaryButton label="Fotoğrafı Analiz Et" disabled={pickingSource !== null || draftLocked} onPress={() => router.push('/report/analysis')} />
       ) : null}
     </Screen>
   );

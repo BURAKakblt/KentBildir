@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, AppState, Linking, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -12,6 +12,8 @@ import { getLocationAccuracyLevel } from '@/constants/location';
 import { colors, spacing } from '@/constants/theme';
 import { useReportDraft } from '@/context/ReportDraftContext';
 import { getCurrentReportLocation, getLocationPrecision, LocationTimeoutError } from '@/services/location';
+import { submitReport } from '@/services/api';
+import { getDefaultDescription } from '@/services/description';
 import type { IssueCategoryId } from '@/types/report';
 
 type LocationError = 'permission_denied' | 'permission_blocked' | 'services_disabled' | 'timeout' | 'unavailable' | null;
@@ -30,11 +32,11 @@ function categoryLabel(categoryId: IssueCategoryId | null) {
 
 export default function ReportFormScreen() {
   const {
-    completeDraft,
     draft,
     setDescription,
     setLocation,
     setSelectedCategory,
+    setSubmissionStatus,
   } = useReportDraft();
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState<LocationError>(null);
@@ -43,9 +45,11 @@ export default function ReportFormScreen() {
   const locationRequestInFlight = useRef(false);
   const mounted = useRef(true);
   const waitingForSettings = useRef(false);
+  const submissionInFlight = useRef(false);
+  const draftLocked = draft.status === 'submitting' || draft.status === 'submitted';
 
   const acquireLocation = useCallback(async () => {
-    if (locationRequestInFlight.current) return;
+    if (locationRequestInFlight.current || draftLocked) return;
     locationRequestInFlight.current = true;
     const requestId = ++locationRequestId.current;
     setIsLocating(true);
@@ -77,7 +81,7 @@ export default function ReportFormScreen() {
         if (mounted.current) setIsLocating(false);
       }
     }
-  }, [setLocation]);
+  }, [draftLocked, setLocation]);
 
   useEffect(() => {
     mounted.current = true;
@@ -114,7 +118,7 @@ export default function ReportFormScreen() {
 
   const descriptionLength = draft.description.trim().length;
   const descriptionIsValid = descriptionLength >= 10 && descriptionLength <= 1000;
-  const otherCategoryIsValid = draft.selectedCategoryId !== 'other' || draft.descriptionEdited;
+  const otherCategoryIsValid = draft.selectedCategoryId !== 'other' || draft.description.trim() !== getDefaultDescription('other').trim();
   const isValid = Boolean(
     draft.photoUri
       && draft.selectedCategoryId
@@ -132,13 +136,17 @@ export default function ReportFormScreen() {
     void Linking.openSettings();
   }
 
-  function finishDraft() {
+  async function finishDraft() {
     if (!isValid) {
       Alert.alert('Eksik bilgiler', 'Fotoğraf, kategori, konum ve açıklama alanlarının tamamlandığından emin olun.');
       return;
     }
-    completeDraft();
-    Alert.alert('Taslak hazır', 'Bildirim taslağı başarıyla hazırlandı.');
+    if (submissionInFlight.current || draftLocked) return;
+    submissionInFlight.current = true;
+    setSubmissionStatus('submitting');
+    try { const report = await submitReport(draft); setSubmissionStatus('submitted', report.id); router.replace('/report/success' as Href); }
+    catch (error) { setSubmissionStatus('failed'); Alert.alert('Gönderilemedi', error instanceof Error ? error.message : 'Bildirim gönderilemedi. Taslağınız korundu.'); }
+    finally { submissionInFlight.current = false; }
   }
 
   return (
@@ -160,7 +168,7 @@ export default function ReportFormScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Sorun türü</Text>
         <Text style={styles.helper}>AI önerisini kontrol edin; gerekirse kategoriyi değiştirebilirsiniz.</Text>
-        <CategorySelector value={draft.selectedCategoryId} onChange={changeCategory} />
+        <CategorySelector value={draft.selectedCategoryId} onChange={changeCategory} disabled={draftLocked} />
       </View>
 
       <View style={styles.section}>
@@ -194,7 +202,7 @@ export default function ReportFormScreen() {
           {locationError === 'permission_blocked' ? (
             <PrimaryButton label="Ayarlara Git" variant="secondary" onPress={openSettings} />
           ) : null}
-          <PrimaryButton label={draft.location ? 'Konumu Tekrar Al' : 'Konumu Al'} variant="secondary" loading={isLocating} onPress={() => void acquireLocation()} />
+          <PrimaryButton label={draft.location ? 'Konumu Tekrar Al' : 'Konumu Al'} variant="secondary" loading={isLocating} disabled={draftLocked} onPress={() => void acquireLocation()} />
         </View>
       </View>
 
@@ -203,6 +211,7 @@ export default function ReportFormScreen() {
         <TextInput
           accessibilityLabel="Bildirim açıklaması"
           multiline
+          editable={!draftLocked}
           maxLength={1000}
           onChangeText={setDescription}
           placeholder="Sorunu kısaca açıklayın"
@@ -213,7 +222,7 @@ export default function ReportFormScreen() {
         />
         <Text style={styles.characterCount}>{draft.description.length}/1000</Text>
         {descriptionLength > 0 && descriptionLength < 10 ? <Text style={styles.errorText}>Açıklama en az 10 karakter olmalıdır.</Text> : null}
-        {draft.selectedCategoryId === 'other' && !draft.descriptionEdited ? <Text style={styles.errorText}>Diğer kategorisinde açıklamayı soruna göre düzenlemelisiniz.</Text> : null}
+        {draft.selectedCategoryId === 'other' && !otherCategoryIsValid ? <Text style={styles.errorText}>Diğer kategorisinde açıklamayı soruna göre düzenlemelisiniz.</Text> : null}
       </View>
 
       <View style={styles.previewCard}>
@@ -230,7 +239,7 @@ export default function ReportFormScreen() {
       </View>
 
       {!isValid ? <Text style={styles.validation}>Taslağı tamamlamak için fotoğraf, sorun türü, konum ve geçerli bir açıklama gereklidir.</Text> : null}
-      <PrimaryButton label={draft.status === 'completed' ? 'Bildirim Taslağı Hazır' : 'Bildirim Taslağını Tamamla'} disabled={!isValid || draft.status === 'completed'} onPress={finishDraft} />
+      <PrimaryButton label={draft.status === 'submitted' ? 'Bildirim Gönderildi' : 'Bildirimi Gönder'} loading={draft.status === 'submitting'} disabled={!isValid || draft.status === 'submitted'} onPress={() => void finishDraft()} />
     </Screen>
   );
 }

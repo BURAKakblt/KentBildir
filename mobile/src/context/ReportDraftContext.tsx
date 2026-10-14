@@ -19,7 +19,8 @@ type ReportDraftAction =
   | { type: 'set_location'; payload: ReportLocation }
   | { type: 'set_description'; payload: { value: string; edited: boolean } }
   | { type: 'complete_draft' }
-  | { type: 'reset_draft' };
+  | { type: 'set_submission_status'; payload: { status: 'submitting' | 'submitted' | 'failed'; reportId?: string } }
+  | { type: 'reset_draft'; payload?: { force: boolean } };
 
 interface ReportDraftContextValue {
   draft: ReportDraft;
@@ -30,7 +31,8 @@ interface ReportDraftContextValue {
   setLocation: (location: ReportLocation) => void;
   setDescription: (description: string) => void;
   completeDraft: () => void;
-  resetDraft: () => void;
+  setSubmissionStatus: (status: 'submitting' | 'submitted' | 'failed', reportId?: string) => void;
+  resetDraft: (force?: boolean) => void;
 }
 
 function createInitialDraft(): ReportDraft {
@@ -44,18 +46,21 @@ function createInitialDraft(): ReportDraft {
     description: '',
     descriptionEdited: false,
     status: 'idle',
+    submittedReportId: null,
   };
 }
 
 const initialDraft = createInitialDraft();
 
 function editableStatus(state: ReportDraft): ReportDraftStatus {
-  return state.status === 'completed' ? 'analyzed' : state.status;
+  return ['completed', 'submitted', 'failed'].includes(state.status) ? 'analyzed' : state.status;
 }
 
 function reportDraftReducer(state: ReportDraft, action: ReportDraftAction): ReportDraft {
+  const locked = state.status === 'submitting' || state.status === 'submitted';
   switch (action.type) {
     case 'set_photo':
+      if (locked) return state;
       return {
         ...createInitialDraft(),
         photoUri: action.payload.uri,
@@ -63,8 +68,10 @@ function reportDraftReducer(state: ReportDraft, action: ReportDraftAction): Repo
         status: 'photo_selected',
       };
     case 'start_analysis':
+      if (locked) return state;
       return { ...state, status: 'analyzing' };
     case 'set_analysis_result':
+      if (locked) return state;
       return {
         ...state,
         aiSuggestion: action.payload,
@@ -75,6 +82,7 @@ function reportDraftReducer(state: ReportDraft, action: ReportDraftAction): Repo
         status: 'analyzed',
       };
     case 'set_selected_category':
+      if (locked) return state;
       return {
         ...state,
         selectedCategoryId: action.payload,
@@ -82,8 +90,10 @@ function reportDraftReducer(state: ReportDraft, action: ReportDraftAction): Repo
         status: editableStatus(state),
       };
     case 'set_location':
+      if (locked) return state;
       return { ...state, location: action.payload, status: editableStatus(state) };
     case 'set_description':
+      if (locked) return state;
       return {
         ...state,
         description: action.payload.value,
@@ -92,7 +102,10 @@ function reportDraftReducer(state: ReportDraft, action: ReportDraftAction): Repo
       };
     case 'complete_draft':
       return { ...state, status: 'completed' };
+    case 'set_submission_status':
+      return { ...state, status: action.payload.status, submittedReportId: action.payload.reportId ?? state.submittedReportId };
     case 'reset_draft':
+      if (locked && !action.payload?.force) return state;
       return createInitialDraft();
   }
 }
@@ -108,7 +121,8 @@ export function ReportDraftProvider({ children }: PropsWithChildren) {
   const setLocation = useCallback((location: ReportLocation) => dispatch({ type: 'set_location', payload: location }), []);
   const setDescription = useCallback((description: string) => dispatch({ type: 'set_description', payload: { value: description, edited: true } }), []);
   const completeDraft = useCallback(() => dispatch({ type: 'complete_draft' }), []);
-  const resetDraft = useCallback(() => dispatch({ type: 'reset_draft' }), []);
+  const setSubmissionStatus = useCallback((status: 'submitting' | 'submitted' | 'failed', reportId?: string) => dispatch({ type: 'set_submission_status', payload: { status, reportId } }), []);
+  const resetDraft = useCallback((force = false) => dispatch({ type: 'reset_draft', payload: { force } }), []);
 
   const value = useMemo<ReportDraftContextValue>(() => ({
     draft,
@@ -119,8 +133,9 @@ export function ReportDraftProvider({ children }: PropsWithChildren) {
     setLocation,
     setDescription,
     completeDraft,
+    setSubmissionStatus,
     resetDraft,
-  }), [completeDraft, draft, resetDraft, setAnalysisResult, setDescription, setLocation, setPhoto, setSelectedCategory, startAnalysis]);
+  }), [completeDraft, draft, resetDraft, setAnalysisResult, setDescription, setLocation, setPhoto, setSelectedCategory, setSubmissionStatus, startAnalysis]);
 
   return <ReportDraftContext.Provider value={value}>{children}</ReportDraftContext.Provider>;
 }

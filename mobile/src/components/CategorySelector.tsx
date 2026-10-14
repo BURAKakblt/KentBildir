@@ -7,9 +7,10 @@ import type { IssueCategoryId } from '@/types/report';
 interface CategorySelectorProps {
   value: IssueCategoryId | null;
   onChange: (value: IssueCategoryId) => void;
+  disabled?: boolean;
 }
 
-export function CategorySelector({ value, onChange }: CategorySelectorProps) {
+export function CategorySelector({ value, onChange, disabled = false }: CategorySelectorProps) {
   return (
     <View accessibilityRole="radiogroup" style={styles.list}>
       {ISSUE_CATEGORIES.map((category) => {
@@ -18,9 +19,10 @@ export function CategorySelector({ value, onChange }: CategorySelectorProps) {
           <Pressable
             accessibilityRole="radio"
             accessibilityState={{ checked: selected }}
+            disabled={disabled}
             key={category.id}
             onPress={() => onChange(category.id)}
-            style={[styles.option, selected && styles.optionSelected]}
+            style={[styles.option, selected && styles.optionSelected, disabled && styles.disabled]}
           >
             <View style={[styles.radio, selected && styles.radioSelected]}>
               {selected ? <View style={styles.radioDot} /> : null}
@@ -42,4 +44,5 @@ const styles = StyleSheet.create({
   radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary },
   label: { flex: 1, color: colors.text, fontSize: 15, lineHeight: 21, fontWeight: '500' },
   labelSelected: { color: colors.primary, fontWeight: '700' },
+  disabled: { opacity: 0.55 },
 });

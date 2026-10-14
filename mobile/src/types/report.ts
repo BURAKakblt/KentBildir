@@ -3,7 +3,7 @@ import type { ISSUE_CATEGORIES, REPORT_STATUSES } from '@/constants/categories';
 export type IssueCategoryId = (typeof ISSUE_CATEGORIES)[number]['id'];
 export type ReportStatusId = (typeof REPORT_STATUSES)[number]['id'];
 export type PhotoSource = 'camera' | 'library';
-export type ReportDraftStatus = 'idle' | 'photo_selected' | 'analyzing' | 'analyzed' | 'completed';
+export type ReportDraftStatus = 'idle' | 'photo_selected' | 'analyzing' | 'analyzed' | 'completed' | 'submitting' | 'submitted' | 'failed';
 
 export interface ReportLocation {
   latitude: number;
@@ -11,8 +11,13 @@ export interface ReportLocation {
   accuracy: number | null;
   address: string | null;
   capturedAt: number;
-  isMocked: boolean;
+  isMocked: boolean | null;
   precision: 'precise' | 'approximate';
+  city: string | null;
+  subregion: string | null;
+  district: string | null;
+  postalCode: string | null;
+  countryCode: string | null;
 }
 
 export interface AnalysisResult {
@@ -30,6 +35,7 @@ export interface ReportDraft {
   description: string;
   descriptionEdited: boolean;
   status: ReportDraftStatus;
+  submittedReportId: string | null;
 }
 
 export interface ReportSummary {

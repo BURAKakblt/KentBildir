@@ -9,6 +9,7 @@ export class LocationTimeoutError extends Error {
     this.name = 'LocationTimeoutError';
   }
 }
+const REVERSE_GEOCODE_TIMEOUT_MS = 5_000;
 
 function joinParts(parts: (string | null | undefined)[], separator: string) {
   return parts.filter((part): part is string => Boolean(part?.trim())).join(separator);
@@ -46,10 +47,11 @@ export async function getCurrentReportLocation(precision: ReportLocation['precis
   const position = await getPositionWithTimeout();
   const { latitude, longitude, accuracy } = position.coords;
   let address: string | null = null;
+  let geocoded: Location.LocationGeocodedAddress | null = null;
 
   try {
-    const addresses = await Location.reverseGeocodeAsync({ latitude, longitude });
-    if (addresses[0]) address = formatAddress(addresses[0]);
+    const addresses = await Promise.race([Location.reverseGeocodeAsync({ latitude, longitude }), new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Reverse geocode timeout')), REVERSE_GEOCODE_TIMEOUT_MS))]);
+    if (addresses[0]) { geocoded = addresses[0]; address = formatAddress(addresses[0]); }
   } catch {
     // Koordinatlar kullanılabilir olduğundan reverse geocode hatası konumu geçersiz kılmaz.
   }
@@ -60,7 +62,12 @@ export async function getCurrentReportLocation(precision: ReportLocation['precis
     accuracy,
     address,
     capturedAt: position.timestamp,
-    isMocked: position.mocked ?? false,
+    isMocked: position.mocked ?? null,
     precision,
+    city: geocoded?.city ?? null,
+    subregion: geocoded?.subregion ?? null,
+    district: geocoded?.district ?? null,
+    postalCode: geocoded?.postalCode ?? null,
+    countryCode: geocoded?.isoCountryCode ?? null,
   };
 }
