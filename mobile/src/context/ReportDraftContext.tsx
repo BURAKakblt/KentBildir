@@ -1,10 +1,14 @@
+import * as Crypto from 'expo-crypto';
 import { createContext, type PropsWithChildren, useCallback, useContext, useMemo, useReducer } from 'react';
 
+import { getDefaultDescription } from '@/services/description';
 import type {
   AnalysisResult,
   IssueCategoryId,
   PhotoSource,
   ReportDraft,
+  ReportDraftStatus,
+  ReportLocation,
 } from '@/types/report';
 
 type ReportDraftAction =
@@ -12,7 +16,9 @@ type ReportDraftAction =
   | { type: 'start_analysis' }
   | { type: 'set_analysis_result'; payload: AnalysisResult }
   | { type: 'set_selected_category'; payload: IssueCategoryId }
-  | { type: 'set_description'; payload: string }
+  | { type: 'set_location'; payload: ReportLocation }
+  | { type: 'set_description'; payload: { value: string; edited: boolean } }
+  | { type: 'complete_draft' }
   | { type: 'reset_draft' };
 
 interface ReportDraftContextValue {
@@ -21,28 +27,39 @@ interface ReportDraftContextValue {
   startAnalysis: () => void;
   setAnalysisResult: (result: AnalysisResult) => void;
   setSelectedCategory: (categoryId: IssueCategoryId) => void;
+  setLocation: (location: ReportLocation) => void;
   setDescription: (description: string) => void;
+  completeDraft: () => void;
   resetDraft: () => void;
 }
 
-const initialDraft: ReportDraft = {
-  photoUri: null,
-  photoSource: null,
-  aiSuggestion: null,
-  selectedCategoryId: null,
-  location: null,
-  description: '',
-  status: 'idle',
-};
+function createInitialDraft(): ReportDraft {
+  return {
+    id: Crypto.randomUUID(),
+    photoUri: null,
+    photoSource: null,
+    aiSuggestion: null,
+    selectedCategoryId: null,
+    location: null,
+    description: '',
+    descriptionEdited: false,
+    status: 'idle',
+  };
+}
+
+const initialDraft = createInitialDraft();
+
+function editableStatus(state: ReportDraft): ReportDraftStatus {
+  return state.status === 'completed' ? 'analyzed' : state.status;
+}
 
 function reportDraftReducer(state: ReportDraft, action: ReportDraftAction): ReportDraft {
   switch (action.type) {
     case 'set_photo':
       return {
-        ...initialDraft,
+        ...createInitialDraft(),
         photoUri: action.payload.uri,
         photoSource: action.payload.source,
-        description: state.description,
         status: 'photo_selected',
       };
     case 'start_analysis':
@@ -52,14 +69,31 @@ function reportDraftReducer(state: ReportDraft, action: ReportDraftAction): Repo
         ...state,
         aiSuggestion: action.payload,
         selectedCategoryId: action.payload.suggestedCategoryId,
+        description: state.descriptionEdited
+          ? state.description
+          : getDefaultDescription(action.payload.suggestedCategoryId),
         status: 'analyzed',
       };
     case 'set_selected_category':
-      return { ...state, selectedCategoryId: action.payload };
+      return {
+        ...state,
+        selectedCategoryId: action.payload,
+        description: state.descriptionEdited ? state.description : getDefaultDescription(action.payload),
+        status: editableStatus(state),
+      };
+    case 'set_location':
+      return { ...state, location: action.payload, status: editableStatus(state) };
     case 'set_description':
-      return { ...state, description: action.payload };
+      return {
+        ...state,
+        description: action.payload.value,
+        descriptionEdited: action.payload.edited,
+        status: editableStatus(state),
+      };
+    case 'complete_draft':
+      return { ...state, status: 'completed' };
     case 'reset_draft':
-      return initialDraft;
+      return createInitialDraft();
   }
 }
 
@@ -71,7 +105,9 @@ export function ReportDraftProvider({ children }: PropsWithChildren) {
   const startAnalysis = useCallback(() => dispatch({ type: 'start_analysis' }), []);
   const setAnalysisResult = useCallback((result: AnalysisResult) => dispatch({ type: 'set_analysis_result', payload: result }), []);
   const setSelectedCategory = useCallback((categoryId: IssueCategoryId) => dispatch({ type: 'set_selected_category', payload: categoryId }), []);
-  const setDescription = useCallback((description: string) => dispatch({ type: 'set_description', payload: description }), []);
+  const setLocation = useCallback((location: ReportLocation) => dispatch({ type: 'set_location', payload: location }), []);
+  const setDescription = useCallback((description: string) => dispatch({ type: 'set_description', payload: { value: description, edited: true } }), []);
+  const completeDraft = useCallback(() => dispatch({ type: 'complete_draft' }), []);
   const resetDraft = useCallback(() => dispatch({ type: 'reset_draft' }), []);
 
   const value = useMemo<ReportDraftContextValue>(() => ({
@@ -80,9 +116,11 @@ export function ReportDraftProvider({ children }: PropsWithChildren) {
     startAnalysis,
     setAnalysisResult,
     setSelectedCategory,
+    setLocation,
     setDescription,
+    completeDraft,
     resetDraft,
-  }), [draft, resetDraft, setAnalysisResult, setDescription, setPhoto, setSelectedCategory, startAnalysis]);
+  }), [completeDraft, draft, resetDraft, setAnalysisResult, setDescription, setLocation, setPhoto, setSelectedCategory, startAnalysis]);
 
   return <ReportDraftContext.Provider value={value}>{children}</ReportDraftContext.Provider>;
 }

@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { CategorySelector } from '@/components/CategorySelector';
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -88,14 +88,10 @@ export default function AnalysisScreen() {
             <CategorySelector value={draft.selectedCategoryId} onChange={setSelectedCategory} />
           </View>
 
-          <View style={styles.locationCard}>
-            <Text style={styles.locationTitle}>Konum</Text>
-            <Text style={styles.helper}>{"Konum bilgisi M2'de eklenecek."}</Text>
-          </View>
           <PrimaryButton
-            label="Bildirimi Hazırla"
+            label="Devam Et"
             disabled={!draft.selectedCategoryId}
-            onPress={() => Alert.alert('Başarılı', 'Bildirim taslağı hazırlandı.')}
+            onPress={() => router.push('/report/form' as Href)}
           />
         </>
       ) : null}
@@ -119,6 +115,4 @@ const styles = StyleSheet.create({
   section: { gap: spacing.sm },
   sectionTitle: { color: colors.text, fontSize: 19, fontWeight: '800' },
   helper: { color: colors.textMuted, fontSize: 14, lineHeight: 20, marginBottom: spacing.sm },
-  locationCard: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 16, padding: spacing.md },
-  locationTitle: { color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: spacing.xs },
 });

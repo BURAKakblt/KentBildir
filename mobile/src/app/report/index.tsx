@@ -30,8 +30,25 @@ export default function ReportScreen() {
     ]);
   }
 
+  function confirmPhotoChange(): Promise<boolean> {
+    if (!draft.photoUri || !draft.descriptionEdited) return Promise.resolve(true);
+
+    return new Promise((resolve) => {
+      Alert.alert(
+        'Fotoğraf değiştirilsin mi?',
+        'Fotoğrafı değiştirirseniz mevcut bildirim taslağındaki analiz, konum ve açıklama sıfırlanacaktır. Devam etmek istiyor musunuz?',
+        [
+          { text: 'İptal', style: 'cancel', onPress: () => resolve(false) },
+          { text: 'Devam Et', style: 'destructive', onPress: () => resolve(true) },
+        ],
+        { cancelable: true, onDismiss: () => resolve(false) },
+      );
+    });
+  }
+
   async function pickPhoto(source: PhotoSource) {
     if (pickingSource) return;
+    if (!(await confirmPhotoChange())) return;
     setPickingSource(source);
 
     try {
@@ -59,6 +76,10 @@ export default function ReportScreen() {
     }
   }
 
+  async function removePhoto() {
+    if (await confirmPhotoChange()) resetDraft();
+  }
+
   return (
     <Screen contentContainerStyle={styles.container}>
       <View>
@@ -84,7 +105,7 @@ export default function ReportScreen() {
             <Image source={{ uri: draft.photoUri }} style={styles.preview} contentFit="cover" accessibilityLabel="Seçilen sorun fotoğrafı" />
             <View style={styles.previewMeta}>
               <Text style={styles.sourceText}>{draft.photoSource === 'camera' ? 'Kamera ile çekildi' : 'Galeriden seçildi'}</Text>
-              <Pressable accessibilityRole="button" disabled={pickingSource !== null} onPress={resetDraft} hitSlop={8}>
+              <Pressable accessibilityRole="button" disabled={pickingSource !== null} onPress={() => void removePhoto()} hitSlop={8}>
                 <Text style={styles.removeText}>Fotoğrafı Kaldır</Text>
               </Pressable>
             </View>

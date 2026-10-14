@@ -36,6 +36,15 @@
         }
       ],
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "KentBildir, bildirilen sorunun yerini belirlemek için konumunuza erişir.",
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false,
+          "motionUsagePermission": false
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#208AEF",
