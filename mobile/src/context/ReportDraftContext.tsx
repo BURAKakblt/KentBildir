@@ -14,7 +14,7 @@ import type {
 type ReportDraftAction =
   | { type: 'set_photo'; payload: { uri: string; source: PhotoSource } }
   | { type: 'start_analysis' }
-  | { type: 'set_analysis_result'; payload: AnalysisResult }
+  | { type: 'set_analysis_result'; payload: { result: AnalysisResult; photoUri: string } }
   | { type: 'set_selected_category'; payload: IssueCategoryId }
   | { type: 'set_location'; payload: ReportLocation }
   | { type: 'set_description'; payload: { value: string; edited: boolean } }
@@ -26,7 +26,7 @@ interface ReportDraftContextValue {
   draft: ReportDraft;
   setPhoto: (uri: string, source: PhotoSource) => void;
   startAnalysis: () => void;
-  setAnalysisResult: (result: AnalysisResult) => void;
+  setAnalysisResult: (result: AnalysisResult, photoUri: string) => void;
   setSelectedCategory: (categoryId: IssueCategoryId) => void;
   setLocation: (location: ReportLocation) => void;
   setDescription: (description: string) => void;
@@ -71,14 +71,15 @@ function reportDraftReducer(state: ReportDraft, action: ReportDraftAction): Repo
       if (locked) return state;
       return { ...state, status: 'analyzing' };
     case 'set_analysis_result':
-      if (locked) return state;
+      if (locked || state.photoUri !== action.payload.photoUri) return state;
+      const selectedCategoryId = state.selectedCategoryId ?? action.payload.result.suggestedCategoryId;
       return {
         ...state,
-        aiSuggestion: action.payload,
-        selectedCategoryId: action.payload.suggestedCategoryId,
+        aiSuggestion: action.payload.result,
+        selectedCategoryId,
         description: state.descriptionEdited
           ? state.description
-          : getDefaultDescription(action.payload.suggestedCategoryId),
+          : getDefaultDescription(selectedCategoryId),
         status: 'analyzed',
       };
     case 'set_selected_category':
@@ -116,7 +117,7 @@ export function ReportDraftProvider({ children }: PropsWithChildren) {
   const [draft, dispatch] = useReducer(reportDraftReducer, initialDraft);
   const setPhoto = useCallback((uri: string, source: PhotoSource) => dispatch({ type: 'set_photo', payload: { uri, source } }), []);
   const startAnalysis = useCallback(() => dispatch({ type: 'start_analysis' }), []);
-  const setAnalysisResult = useCallback((result: AnalysisResult) => dispatch({ type: 'set_analysis_result', payload: result }), []);
+  const setAnalysisResult = useCallback((result: AnalysisResult, photoUri: string) => dispatch({ type: 'set_analysis_result', payload: { result, photoUri } }), []);
   const setSelectedCategory = useCallback((categoryId: IssueCategoryId) => dispatch({ type: 'set_selected_category', payload: categoryId }), []);
   const setLocation = useCallback((location: ReportLocation) => dispatch({ type: 'set_location', payload: location }), []);
   const setDescription = useCallback((description: string) => dispatch({ type: 'set_description', payload: { value: description, edited: true } }), []);

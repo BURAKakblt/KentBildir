@@ -8,4 +8,9 @@ describe('config', () => {
   it('kısa tokenı reddeder', () => expect(() => loadConfig({ ...base, DEV_READ_ACCESS_TOKEN: 'short' })).toThrow());
   it('32+ karakter development tokenını kabul eder', () => expect(loadConfig({ ...base, NODE_ENV: 'development', DEV_READ_ACCESS_TOKEN: 't'.repeat(32) }).DEV_READ_ACCESS_TOKEN).toHaveLength(32));
   it('production ortamında dev tokenı reddeder', () => expect(() => loadConfig({ ...base, NODE_ENV: 'production', DEV_READ_ACCESS_TOKEN: 't'.repeat(32) })).toThrow());
+  it('Gemini anahtarı olmadan başlar ve model varsayılanını kullanır', () => {
+    const config = loadConfig({ ...base, GEMINI_API_KEY: '   ', GEMINI_VISION_MODEL: '' });
+    expect(config.GEMINI_API_KEY).toBeUndefined();
+    expect(config.GEMINI_VISION_MODEL).toBe('gemini-3.5-flash-lite');
+  });
 });

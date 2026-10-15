@@ -104,7 +104,7 @@ export default function ReportFormScreen() {
   }, [acquireLocation]);
 
   useEffect(() => {
-    if (!draft.photoUri || !draft.aiSuggestion) {
+    if (!draft.photoUri || !draft.selectedCategoryId) {
       router.replace('/report');
       return;
     }
@@ -112,9 +112,9 @@ export default function ReportFormScreen() {
       requestedLocation.current = true;
       void acquireLocation();
     }
-  }, [acquireLocation, draft.aiSuggestion, draft.location, draft.photoUri]);
+  }, [acquireLocation, draft.location, draft.photoUri, draft.selectedCategoryId]);
 
-  if (!draft.photoUri || !draft.aiSuggestion) return null;
+  if (!draft.photoUri || !draft.selectedCategoryId) return null;
 
   const descriptionLength = draft.description.trim().length;
   const descriptionIsValid = descriptionLength >= 10 && descriptionLength <= 1000;
@@ -154,8 +154,8 @@ export default function ReportFormScreen() {
       <View style={styles.card}>
         <Image source={{ uri: draft.photoUri }} style={styles.photo} contentFit="cover" accessibilityLabel="Bildirim fotoğrafı" />
         <Text style={styles.eyebrow}>AI TAHMİNİ</Text>
-        <Text style={styles.cardTitle}>{categoryLabel(draft.aiSuggestion.suggestedCategoryId)}</Text>
-        <Text style={styles.confidence}>Güven oranı: %{Math.round(draft.aiSuggestion.confidence * 100)}</Text>
+        <Text style={styles.cardTitle}>{draft.aiSuggestion ? categoryLabel(draft.aiSuggestion.suggestedCategoryId) : 'Otomatik tahmin bulunamadı'}</Text>
+        {draft.aiSuggestion ? <Text style={styles.confidence}>Güven oranı: %{Math.round(draft.aiSuggestion.confidence * 100)}</Text> : null}
       </View>
 
       {draft.photoSource === 'library' ? (
@@ -231,7 +231,7 @@ export default function ReportFormScreen() {
         <Text style={styles.previewLabel}>Sorun Türü</Text>
         <Text style={styles.previewValue}>{categoryLabel(draft.selectedCategoryId)}</Text>
         <Text style={styles.previewLabel}>AI Tahmini / Güven</Text>
-        <Text style={styles.previewValue}>{categoryLabel(draft.aiSuggestion.suggestedCategoryId)} · %{Math.round(draft.aiSuggestion.confidence * 100)}</Text>
+        <Text style={styles.previewValue}>{draft.aiSuggestion ? `${categoryLabel(draft.aiSuggestion.suggestedCategoryId)} · %${Math.round(draft.aiSuggestion.confidence * 100)}` : 'Otomatik tahmin bulunamadı'}</Text>
         <Text style={styles.previewLabel}>Konum / Adres</Text>
         <Text style={styles.previewValue}>{draft.location?.address ?? 'Henüz alınmadı'}</Text>
         <Text style={styles.previewLabel}>Açıklama</Text>

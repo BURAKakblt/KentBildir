@@ -27,9 +27,10 @@ export default function AnalysisScreen() {
     let active = true;
     startAnalysis();
 
-    void analyzePhoto(draft.photoUri)
+    const photoUri = draft.photoUri;
+    void analyzePhoto(photoUri)
       .then((result) => {
-        if (active) setAnalysisResult(result);
+        if (active) setAnalysisResult(result, photoUri);
       })
       .catch(() => {
         if (active) setAnalysisError(true);
@@ -67,10 +68,17 @@ export default function AnalysisScreen() {
           <Text style={styles.loadingText}>Fotoğraf analiz ediliyor…</Text>
         </View>
       ) : analysisError ? (
-        <View style={styles.loadingCard}>
-          <Text style={styles.errorText}>Fotoğraf analiz edilemedi.</Text>
-          <PrimaryButton label="Tekrar Dene" variant="secondary" onPress={retryAnalysis} />
-        </View>
+        <>
+          <View style={styles.loadingCard}>
+            <Text style={styles.errorText}>Fotoğraf otomatik analiz edilemedi. Kategoriyi manuel seçebilirsiniz.</Text>
+            <PrimaryButton label="Tekrar Dene" variant="secondary" onPress={retryAnalysis} />
+          </View>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Sorun türü</Text>
+            <CategorySelector value={draft.selectedCategoryId} onChange={setSelectedCategory} />
+          </View>
+          <PrimaryButton label="Devam Et" disabled={!draft.selectedCategoryId} onPress={() => router.push('/report/form' as Href)} />
+        </>
       ) : draft.aiSuggestion && suggestion ? (
         <>
           <View style={styles.resultCard}>

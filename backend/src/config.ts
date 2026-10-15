@@ -9,6 +9,8 @@ const schema = z.object({
     value => typeof value === 'string' ? (value.trim() || undefined) : value,
     z.string().min(32).optional(),
   ),
+  GEMINI_API_KEY: z.preprocess(value => typeof value === 'string' ? (value.trim() || undefined) : value, z.string().min(10).optional()),
+  GEMINI_VISION_MODEL: z.preprocess(value => typeof value === 'string' ? (value.trim() || undefined) : value, z.string().min(1).default('gemini-3.5-flash-lite')),
 });
 export type Config = z.infer<typeof schema> & { corsOrigins: string[] };
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
