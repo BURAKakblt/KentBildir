@@ -4,6 +4,7 @@ import { createContext, type PropsWithChildren, useCallback, useContext, useMemo
 import { getDefaultDescription } from '@/services/description';
 import type {
   AnalysisResult,
+  EmailDeliveryStatus,
   IssueCategoryId,
   PhotoSource,
   ReportDraft,
@@ -19,7 +20,7 @@ type ReportDraftAction =
   | { type: 'set_location'; payload: ReportLocation }
   | { type: 'set_description'; payload: { value: string; edited: boolean } }
   | { type: 'complete_draft' }
-  | { type: 'set_submission_status'; payload: { status: 'submitting' | 'submitted' | 'failed'; reportId?: string } }
+  | { type: 'set_submission_status'; payload: { status: 'submitting' | 'submitted' | 'failed'; reportId?: string; emailStatus?: EmailDeliveryStatus } }
   | { type: 'reset_draft'; payload?: { force: boolean } };
 
 interface ReportDraftContextValue {
@@ -31,7 +32,7 @@ interface ReportDraftContextValue {
   setLocation: (location: ReportLocation) => void;
   setDescription: (description: string) => void;
   completeDraft: () => void;
-  setSubmissionStatus: (status: 'submitting' | 'submitted' | 'failed', reportId?: string) => void;
+  setSubmissionStatus: (status: 'submitting' | 'submitted' | 'failed', reportId?: string, emailStatus?: EmailDeliveryStatus) => void;
   resetDraft: (force?: boolean) => void;
 }
 
@@ -47,6 +48,7 @@ function createInitialDraft(): ReportDraft {
     descriptionEdited: false,
     status: 'idle',
     submittedReportId: null,
+    emailDeliveryStatus: null,
   };
 }
 
@@ -104,7 +106,7 @@ function reportDraftReducer(state: ReportDraft, action: ReportDraftAction): Repo
     case 'complete_draft':
       return { ...state, status: 'completed' };
     case 'set_submission_status':
-      return { ...state, status: action.payload.status, submittedReportId: action.payload.reportId ?? state.submittedReportId };
+      return { ...state, status: action.payload.status, submittedReportId: action.payload.reportId ?? state.submittedReportId, emailDeliveryStatus: action.payload.emailStatus ?? state.emailDeliveryStatus };
     case 'reset_draft':
       if (locked && !action.payload?.force) return state;
       return createInitialDraft();
@@ -122,7 +124,7 @@ export function ReportDraftProvider({ children }: PropsWithChildren) {
   const setLocation = useCallback((location: ReportLocation) => dispatch({ type: 'set_location', payload: location }), []);
   const setDescription = useCallback((description: string) => dispatch({ type: 'set_description', payload: { value: description, edited: true } }), []);
   const completeDraft = useCallback(() => dispatch({ type: 'complete_draft' }), []);
-  const setSubmissionStatus = useCallback((status: 'submitting' | 'submitted' | 'failed', reportId?: string) => dispatch({ type: 'set_submission_status', payload: { status, reportId } }), []);
+  const setSubmissionStatus = useCallback((status: 'submitting' | 'submitted' | 'failed', reportId?: string, emailStatus?: EmailDeliveryStatus) => dispatch({ type: 'set_submission_status', payload: { status, reportId, emailStatus } }), []);
   const resetDraft = useCallback((force = false) => dispatch({ type: 'reset_draft', payload: { force } }), []);
 
   const value = useMemo<ReportDraftContextValue>(() => ({

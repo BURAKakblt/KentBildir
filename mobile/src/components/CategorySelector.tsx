@@ -18,6 +18,7 @@ export function CategorySelector({ value, onChange, disabled = false }: Category
         return (
           <Pressable
             accessibilityRole="radio"
+            accessibilityLabel={category.label}
             accessibilityState={{ checked: selected }}
             disabled={disabled}
             key={category.id}

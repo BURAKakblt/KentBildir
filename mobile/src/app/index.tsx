@@ -14,7 +14,7 @@ export default function HomeScreen() {
         <Text style={styles.subtitle}>Şehrindeki bir sorunu kolayca bildir.</Text>
       </View>
       <View style={styles.actions}>
-        <PrimaryButton label="Sorun Bildir" onPress={() => router.push('/report')} />
+        <PrimaryButton label="Yeni Bildirim Oluştur" onPress={() => router.push('/report')} />
         <PrimaryButton label="Bildirimlerim" variant="secondary" onPress={() => router.push('/reports')} />
       </View>
     </Screen>

@@ -1,6 +1,7 @@
 import { z } from 'zod';
+import { REPORT_CATEGORY_IDS } from '../domain/categories.js';
 
-export const categories = ['pothole', 'sidewalk_damage', 'overflowing_bin', 'litter', 'damaged_city_equipment', 'other'] as const;
+export const categories = REPORT_CATEGORY_IDS;
 export const OTHER_DEFAULT_DESCRIPTION = 'Belirtilen konumda belediyenin incelemesini gerektiren bir sorun bulunmaktadır.';
 export const FORBIDDEN_MULTILINE_CONTROLS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/u;
 const FORBIDDEN_SINGLE_LINE_CONTROLS = /[\u0000-\u001F\u007F]/u;

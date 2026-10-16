@@ -13,6 +13,7 @@ import { colors, spacing } from '@/constants/theme';
 import { useReportDraft } from '@/context/ReportDraftContext';
 import { getCurrentReportLocation, getLocationPrecision, LocationTimeoutError } from '@/services/location';
 import { submitReport } from '@/services/api';
+import { addReportToHistory } from '@/services/reportHistory';
 import { getDefaultDescription } from '@/services/description';
 import type { IssueCategoryId } from '@/types/report';
 
@@ -144,7 +145,7 @@ export default function ReportFormScreen() {
     if (submissionInFlight.current || draftLocked) return;
     submissionInFlight.current = true;
     setSubmissionStatus('submitting');
-    try { const report = await submitReport(draft); setSubmissionStatus('submitted', report.id); router.replace('/report/success' as Href); }
+    try { const result = await submitReport(draft); try { await addReportToHistory(result.report.id, result.report.created_at); } catch { if (__DEV__) console.warn('report_history_write_failed'); } setSubmissionStatus('submitted', result.report.id, result.emailStatus); router.replace('/report/success' as Href); }
     catch (error) { setSubmissionStatus('failed'); Alert.alert('Gönderilemedi', error instanceof Error ? error.message : 'Bildirim gönderilemedi. Taslağınız korundu.'); }
     finally { submissionInFlight.current = false; }
   }
@@ -153,9 +154,9 @@ export default function ReportFormScreen() {
     <Screen keyboardVerticalOffset={88} contentContainerStyle={styles.container}>
       <View style={styles.card}>
         <Image source={{ uri: draft.photoUri }} style={styles.photo} contentFit="cover" accessibilityLabel="Bildirim fotoğrafı" />
-        <Text style={styles.eyebrow}>AI TAHMİNİ</Text>
+        <Text style={styles.eyebrow}>AI ÖNERİSİ</Text>
         <Text style={styles.cardTitle}>{draft.aiSuggestion ? categoryLabel(draft.aiSuggestion.suggestedCategoryId) : 'Otomatik tahmin bulunamadı'}</Text>
-        {draft.aiSuggestion ? <Text style={styles.confidence}>Güven oranı: %{Math.round(draft.aiSuggestion.confidence * 100)}</Text> : null}
+        {draft.aiSuggestion ? <Text style={styles.confidence}>Model güven skoru: %{Math.round(draft.aiSuggestion.confidence * 100)}</Text> : null}
       </View>
 
       {draft.photoSource === 'library' ? (
@@ -230,7 +231,7 @@ export default function ReportFormScreen() {
         <Image source={{ uri: draft.photoUri }} style={styles.previewPhoto} contentFit="cover" accessibilityLabel="Bildirim önizleme fotoğrafı" />
         <Text style={styles.previewLabel}>Sorun Türü</Text>
         <Text style={styles.previewValue}>{categoryLabel(draft.selectedCategoryId)}</Text>
-        <Text style={styles.previewLabel}>AI Tahmini / Güven</Text>
+        <Text style={styles.previewLabel}>AI Önerisi / Model güven skoru</Text>
         <Text style={styles.previewValue}>{draft.aiSuggestion ? `${categoryLabel(draft.aiSuggestion.suggestedCategoryId)} · %${Math.round(draft.aiSuggestion.confidence * 100)}` : 'Otomatik tahmin bulunamadı'}</Text>
         <Text style={styles.previewLabel}>Konum / Adres</Text>
         <Text style={styles.previewValue}>{draft.location?.address ?? 'Henüz alınmadı'}</Text>

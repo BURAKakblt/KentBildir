@@ -4,6 +4,7 @@ export type IssueCategoryId = (typeof ISSUE_CATEGORIES)[number]['id'];
 export type ReportStatusId = (typeof REPORT_STATUSES)[number]['id'];
 export type PhotoSource = 'camera' | 'library';
 export type ReportDraftStatus = 'idle' | 'photo_selected' | 'analyzing' | 'analyzed' | 'completed' | 'submitting' | 'submitted' | 'failed';
+export type EmailDeliveryStatus = 'sent' | 'failed' | 'disabled' | 'pending';
 
 export interface ReportLocation {
   latitude: number;
@@ -36,6 +37,7 @@ export interface ReportDraft {
   descriptionEdited: boolean;
   status: ReportDraftStatus;
   submittedReportId: string | null;
+  emailDeliveryStatus: EmailDeliveryStatus | null;
 }
 
 export interface ReportSummary {

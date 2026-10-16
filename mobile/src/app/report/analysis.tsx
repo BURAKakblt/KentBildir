@@ -85,7 +85,7 @@ export default function AnalysisScreen() {
             <Text style={styles.eyebrow}>AI ÖNERİSİ</Text>
             <Text style={styles.result}>{suggestion.label}</Text>
             <View style={styles.confidenceRow}>
-              <Text style={styles.meta}>Güven</Text>
+              <Text style={styles.meta}>Model güven skoru</Text>
               <Text style={styles.confidence}>%{Math.round(draft.aiSuggestion.confidence * 100)}</Text>
             </View>
           </View>

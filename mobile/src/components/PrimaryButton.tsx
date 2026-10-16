@@ -8,15 +8,17 @@ interface PrimaryButtonProps {
   disabled?: boolean;
   loading?: boolean;
   variant?: 'primary' | 'secondary';
+  accessibilityLabel?: string;
 }
 
-export function PrimaryButton({ label, onPress, disabled = false, loading = false, variant = 'primary' }: PrimaryButtonProps) {
+export function PrimaryButton({ label, onPress, disabled = false, loading = false, variant = 'primary', accessibilityLabel = label }: PrimaryButtonProps) {
   const secondary = variant === 'secondary';
   const inactive = disabled || loading;
 
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ busy: loading, disabled: inactive }}
       disabled={inactive}
       onPress={onPress}

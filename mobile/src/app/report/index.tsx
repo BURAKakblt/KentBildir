@@ -106,7 +106,7 @@ export default function ReportScreen() {
             <Image source={{ uri: draft.photoUri }} style={styles.preview} contentFit="cover" accessibilityLabel="Seçilen sorun fotoğrafı" />
             <View style={styles.previewMeta}>
               <Text style={styles.sourceText}>{draft.photoSource === 'camera' ? 'Kamera ile çekildi' : 'Galeriden seçildi'}</Text>
-              <Pressable accessibilityRole="button" disabled={pickingSource !== null || draftLocked} onPress={() => void removePhoto()} hitSlop={8}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Seçilen fotoğrafı kaldır" disabled={pickingSource !== null || draftLocked} onPress={() => void removePhoto()} hitSlop={8}>
                 <Text style={styles.removeText}>Fotoğrafı Kaldır</Text>
               </Pressable>
             </View>
