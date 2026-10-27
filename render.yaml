@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: kentbildir-backend-staging
+    runtime: node
+    rootDir: backend
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeployTrigger: 'off'
+    envVars:
+      - key: NODE_VERSION
+        value: 22.23.4
+      - key: NODE_ENV
+        value: production
+      - key: EMAIL_ENABLED
+        value: "false"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

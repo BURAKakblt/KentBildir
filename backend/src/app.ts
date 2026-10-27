@@ -20,6 +20,7 @@ export function createApp(config: Config, dependencies: { aiProvider?: AIProvide
   const aiProvider = dependencies.aiProvider !== undefined ? dependencies.aiProvider : config.GEMINI_API_KEY ? createGeminiProvider(config.GEMINI_API_KEY, config.GEMINI_VISION_MODEL) : null;
   const emailProvider = dependencies.emailProvider !== undefined ? dependencies.emailProvider : config.EMAIL_ENABLED ? createSmtpEmailProvider(config) : null;
   app.disable('x-powered-by');
+  if (config.NODE_ENV === 'production') app.set('trust proxy', 1);
   app.use(helmet());
   app.use(cors({ origin: (origin, callback) => !origin || config.corsOrigins.includes(origin) ? callback(null, true) : callback(new CorsError('rejected')) }));
   app.use(rateLimit({ windowMs: 60_000, limit: 60, standardHeaders: 'draft-8', legacyHeaders: false }));
