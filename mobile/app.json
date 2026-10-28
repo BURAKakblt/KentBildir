@@ -53,7 +53,7 @@
           "locationWhenInUsePermission": "KentBildir, bildirilen sorunun yerini belirlemek için konumunuza erişir.",
           "locationAlwaysAndWhenInUsePermission": false,
           "locationAlwaysPermission": false,
-          "motionUsagePermission": false
+          "motionUsagePermission": "KentBildir, bildirim konumunu belirleme özelliğini desteklemek için cihaz hareket etkinliği verisine erişebilir."
         }
       ],
       [
