@@ -8,12 +8,14 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import { ISSUE_CATEGORIES } from '@/constants/categories';
 import { colors, spacing } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 import { useReportDraft } from '@/context/ReportDraftContext';
 import { analyzePhoto } from '@/services/analysis';
 
 export default function AnalysisScreen() {
   const { draft, setAnalysisResult, setSelectedCategory, startAnalysis } = useReportDraft();
-  const [analysisError, setAnalysisError] = useState(false);
+  const { getAccessToken } = useAuth();
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
@@ -28,18 +30,19 @@ export default function AnalysisScreen() {
     startAnalysis();
 
     const photoUri = draft.photoUri;
-    void analyzePhoto(photoUri)
+    void getAccessToken()
+      .then((accessToken) => analyzePhoto(photoUri, accessToken, draft.photoMimeType))
       .then((result) => {
         if (active) setAnalysisResult(result, photoUri);
       })
-      .catch(() => {
-        if (active) setAnalysisError(true);
+      .catch((error: unknown) => {
+        if (active) setAnalysisError(error instanceof Error ? error.message : 'Fotoğraf otomatik analiz edilemedi. Lütfen tekrar deneyin.');
       });
 
     return () => {
       active = false;
     };
-  }, [draft.aiSuggestion, draft.photoUri, retryKey, setAnalysisResult, startAnalysis]);
+  }, [draft.aiSuggestion, draft.photoMimeType, draft.photoUri, getAccessToken, retryKey, setAnalysisResult, startAnalysis]);
 
   if (!draft.photoUri) {
     return (
@@ -54,7 +57,7 @@ export default function AnalysisScreen() {
   const isLoading = draft.status === 'analyzing' && !analysisError;
 
   function retryAnalysis() {
-    setAnalysisError(false);
+    setAnalysisError(null);
     setRetryKey((value) => value + 1);
   }
 
@@ -70,7 +73,8 @@ export default function AnalysisScreen() {
       ) : analysisError ? (
         <>
           <View style={styles.loadingCard}>
-            <Text style={styles.errorText}>Fotoğraf otomatik analiz edilemedi. Kategoriyi manuel seçebilirsiniz.</Text>
+            <Text style={styles.errorText}>{analysisError}</Text>
+            <Text style={styles.helper}>Kategoriyi manuel seçebilir veya tekrar deneyebilirsiniz.</Text>
             <PrimaryButton label="Tekrar Dene" variant="secondary" onPress={retryAnalysis} />
           </View>
           <View style={styles.section}>

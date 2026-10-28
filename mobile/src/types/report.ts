@@ -29,6 +29,7 @@ export interface AnalysisResult {
 export interface ReportDraft {
   id: string;
   photoUri: string | null;
+  photoMimeType: string | null;
   photoSource: PhotoSource | null;
   aiSuggestion: AnalysisResult | null;
   selectedCategoryId: IssueCategoryId | null;

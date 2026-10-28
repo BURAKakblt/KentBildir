@@ -5,6 +5,7 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import { SectionHeader } from '@/components/SectionHeader';
 import { colors, spacing } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 import { getReport, type ReportDetail } from '@/services/api';
 import { getReportHistory } from '@/services/reportHistory';
 import { loadHistoryReports } from '@/services/reportList';
@@ -14,16 +15,18 @@ export default function ReportsScreen() {
   const [reports, setReports] = useState<ReportDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { getAccessToken } = useAuth();
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
       const history = await getReportHistory();
-      const loaded = await loadHistoryReports(history, getReport);
+      const accessToken = await getAccessToken();
+      const loaded = await loadHistoryReports(history, (id) => getReport(id, accessToken));
       setReports(loaded);
       if (history.length > loaded.length) setError('Bazı bildirimler şu anda yüklenemedi.');
     } catch { setError('Bildirim geçmişi yüklenemedi.'); }
     finally { setLoading(false); }
-  }, []);
+  }, [getAccessToken]);
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
   return <Screen>

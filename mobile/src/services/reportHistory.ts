@@ -6,6 +6,10 @@ const STORAGE_KEY = 'kentbildir.report-history.v1';
 export const MAX_REPORT_HISTORY = 25;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+export async function hasStoredReportHistory(storage: HistoryStorage = AsyncStorage): Promise<boolean> {
+  return (await storage.getItem(STORAGE_KEY)) !== null;
+}
+
 export async function getReportHistory(storage: HistoryStorage = AsyncStorage): Promise<ReportHistoryEntry[]> {
   try {
     const raw = await storage.getItem(STORAGE_KEY);

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { GET_REPORT_TIMEOUT_MS, getReport, getReportPhotoUrl } from '../../../mobile/src/services/api.ts';
-import { addReportToHistory, getReportHistory, MAX_REPORT_HISTORY } from '../../../mobile/src/services/reportHistory.ts';
+import { GET_REPORT_TIMEOUT_MS, getReport, getReportPhotoSource } from '../../../mobile/src/services/api.ts';
+import { addReportToHistory, getReportHistory, hasStoredReportHistory, MAX_REPORT_HISTORY } from '../../../mobile/src/services/reportHistory.ts';
 import { loadHistoryReports } from '../../../mobile/src/services/reportList.ts';
 import { createReportMapUrl, emailStatusLabel, formatReportDate, reportStatusLabel } from '../../../mobile/src/services/reportPresentation.ts';
 import appConfig from '../../../mobile/app.json';
@@ -28,15 +28,16 @@ describe('mobile M6 services', () => {
 
   it('returns an empty history for malformed storage JSON', async () => {
     expect(await getReportHistory(storage('{broken'))).toEqual([]);
+    expect(await hasStoredReportHistory(storage('{broken'))).toBe(true);
   });
 
   it('builds encoded report URLs and maps 404 to a friendly error', async () => {
     process.env.EXPO_PUBLIC_API_URL = 'https://api.example.test/';
     const fetchMock = vi.fn().mockResolvedValue({ status: 404, ok: false });
     vi.stubGlobal('fetch', fetchMock);
-    await expect(getReport('id/with slash')).rejects.toThrow('Bildirim bulunamadı.');
-    expect(fetchMock).toHaveBeenCalledWith('https://api.example.test/api/reports/id%2Fwith%20slash', expect.objectContaining({ signal: expect.any(AbortSignal) }));
-    expect(getReportPhotoUrl('id/with slash')).toBe('https://api.example.test/api/reports/id%2Fwith%20slash/photo');
+    await expect(getReport('id/with slash', 'test-token')).rejects.toThrow('Bildirim bulunamadı.');
+    expect(fetchMock).toHaveBeenCalledWith('https://api.example.test/api/reports/id%2Fwith%20slash', expect.objectContaining({ signal: expect.any(AbortSignal), headers: { Authorization: 'Bearer test-token' } }));
+    expect(getReportPhotoSource('id/with slash', 'test-token')).toEqual({ uri: 'https://api.example.test/api/reports/id%2Fwith%20slash/photo', headers: { Authorization: 'Bearer test-token' } });
   });
 
   it('uses safe status and all email labels', () => {
@@ -61,7 +62,7 @@ describe('mobile M6 services', () => {
     process.env.EXPO_PUBLIC_API_URL = 'https://api.example.test';
     vi.stubGlobal('fetch', vi.fn((_url: string, init: RequestInit) => new Promise((_resolve, reject) => init.signal?.addEventListener('abort', () => reject(new DOMException('raw timeout', 'AbortError'))))));
     try {
-      const pending = getReport(a);
+      const pending = getReport(a, 'test-token');
       const expectation = expect(pending).rejects.toThrow('Sunucuya ulaşılamadı. Lütfen tekrar deneyin.');
       await vi.advanceTimersByTimeAsync(GET_REPORT_TIMEOUT_MS);
       await expectation;
@@ -80,6 +81,8 @@ describe('mobile M6 services', () => {
     expect(appConfig.expo.android.permissions).not.toContain('android.permission.RECORD_AUDIO');
     const imagePicker = appConfig.expo.plugins.find(plugin => Array.isArray(plugin) && plugin[0] === 'expo-image-picker');
     expect(imagePicker).toEqual(expect.arrayContaining(['expo-image-picker', expect.objectContaining({ microphonePermission: false })]));
+    expect(appConfig.expo.ios.infoPlist.NSAppTransportSecurity.NSAllowsLocalNetworking).toBe(true);
+    expect(appConfig.expo.ios.infoPlist.NSLocalNetworkUsageDescription).toContain('yerel ağ');
   });
 
   it('keeps successful reports when one history fetch fails', async () => {

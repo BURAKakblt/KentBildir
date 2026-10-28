@@ -2,10 +2,11 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
 import { colors } from '@/constants/theme';
+import { AuthProvider } from '@/context/AuthContext';
 
 export default function RootLayout() {
   return (
-    <>
+    <AuthProvider>
       <Stack
         screenOptions={{
           headerBackButtonDisplayMode: 'minimal',
@@ -20,6 +21,6 @@ export default function RootLayout() {
         <Stack.Screen name="reports" options={{ title: 'Bildirimlerim' }} />
       </Stack>
       <StatusBar style="dark" />
-    </>
+    </AuthProvider>
   );
 }

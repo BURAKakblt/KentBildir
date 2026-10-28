@@ -62,13 +62,17 @@ export default function ReportScreen() {
         return;
       }
 
-      const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 0.85 };
+      const options: ImagePicker.ImagePickerOptions = {
+        mediaTypes: ['images'],
+        quality: 0.85,
+        preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+      };
       const result = source === 'camera'
         ? await ImagePicker.launchCameraAsync(options)
         : await ImagePicker.launchImageLibraryAsync(options);
 
       if (!result.canceled && result.assets[0]) {
-        setPhoto(result.assets[0].uri, source);
+        setPhoto(result.assets[0].uri, source, result.assets[0].mimeType ?? null);
       }
     } catch {
       Alert.alert('Fotoğraf eklenemedi', 'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.');

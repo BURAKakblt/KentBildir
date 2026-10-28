@@ -13,7 +13,7 @@ import type {
 } from '@/types/report';
 
 type ReportDraftAction =
-  | { type: 'set_photo'; payload: { uri: string; source: PhotoSource } }
+  | { type: 'set_photo'; payload: { uri: string; source: PhotoSource; mimeType: string | null } }
   | { type: 'start_analysis' }
   | { type: 'set_analysis_result'; payload: { result: AnalysisResult; photoUri: string } }
   | { type: 'set_selected_category'; payload: IssueCategoryId }
@@ -25,7 +25,7 @@ type ReportDraftAction =
 
 interface ReportDraftContextValue {
   draft: ReportDraft;
-  setPhoto: (uri: string, source: PhotoSource) => void;
+  setPhoto: (uri: string, source: PhotoSource, mimeType: string | null) => void;
   startAnalysis: () => void;
   setAnalysisResult: (result: AnalysisResult, photoUri: string) => void;
   setSelectedCategory: (categoryId: IssueCategoryId) => void;
@@ -40,6 +40,7 @@ function createInitialDraft(): ReportDraft {
   return {
     id: Crypto.randomUUID(),
     photoUri: null,
+    photoMimeType: null,
     photoSource: null,
     aiSuggestion: null,
     selectedCategoryId: null,
@@ -66,6 +67,7 @@ function reportDraftReducer(state: ReportDraft, action: ReportDraftAction): Repo
       return {
         ...createInitialDraft(),
         photoUri: action.payload.uri,
+        photoMimeType: action.payload.mimeType,
         photoSource: action.payload.source,
         status: 'photo_selected',
       };
@@ -117,7 +119,7 @@ const ReportDraftContext = createContext<ReportDraftContextValue | null>(null);
 
 export function ReportDraftProvider({ children }: PropsWithChildren) {
   const [draft, dispatch] = useReducer(reportDraftReducer, initialDraft);
-  const setPhoto = useCallback((uri: string, source: PhotoSource) => dispatch({ type: 'set_photo', payload: { uri, source } }), []);
+  const setPhoto = useCallback((uri: string, source: PhotoSource, mimeType: string | null) => dispatch({ type: 'set_photo', payload: { uri, source, mimeType } }), []);
   const startAnalysis = useCallback(() => dispatch({ type: 'start_analysis' }), []);
   const setAnalysisResult = useCallback((result: AnalysisResult, photoUri: string) => dispatch({ type: 'set_analysis_result', payload: { result, photoUri } }), []);
   const setSelectedCategory = useCallback((categoryId: IssueCategoryId) => dispatch({ type: 'set_selected_category', payload: categoryId }), []);

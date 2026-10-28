@@ -5,7 +5,8 @@ import { ActivityIndicator, Alert, Linking, StyleSheet, Text, View } from 'react
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import { colors, spacing } from '@/constants/theme';
-import { getReport, getReportPhotoUrl, type ReportDetail } from '@/services/api';
+import { useAuth } from '@/context/AuthContext';
+import { getReport, getReportPhotoSource, type ReportDetail } from '@/services/api';
 import { categoryLabel, createReportMapUrl, emailStatusLabel, formatReportDate, reportStatusLabel } from '@/services/reportPresentation';
 
 function Field({ label, value }: { label: string; value: string }) { return <View style={styles.field}><Text style={styles.label}>{label}</Text><Text selectable style={styles.value}>{value}</Text></View>; }
@@ -19,13 +20,15 @@ export default function ReportDetailScreen() {
   const [photoFailed, setPhotoFailed] = useState(false);
   const [photoLoading, setPhotoLoading] = useState(true);
   const [retryKey, setRetryKey] = useState(0);
-  useEffect(() => { let active = true; getReport(id).then(value => { if (active) setReport(value); }).catch(reason => { if (active) setError(reason instanceof Error ? reason.message : 'Bildirim yüklenemedi.'); }).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, [id, retryKey]);
+  const [photoAccessToken, setPhotoAccessToken] = useState<string | null>(null);
+  const { getAccessToken } = useAuth();
+  useEffect(() => { let active = true; getAccessToken().then((accessToken) => getReport(id, accessToken).then((value) => ({ value, accessToken }))).then(({ value, accessToken }) => { if (active) { setReport(value); setPhotoAccessToken(accessToken); } }).catch(reason => { if (active) setError(reason instanceof Error ? reason.message : 'Bildirim yüklenemedi.'); }).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, [getAccessToken, id, retryKey]);
   const mapUrl = useMemo(() => report ? createReportMapUrl(report.latitude, report.longitude) : null, [report]);
   async function openMap() { if (!mapUrl) return; try { await Linking.openURL(mapUrl); } catch { Alert.alert('Harita açılamadı', 'Harita uygulaması şu anda açılamıyor. Lütfen tekrar deneyin.'); } }
   if (loading) return <Screen><ActivityIndicator style={styles.loading} color={colors.primary} /></Screen>;
   if (!report) return <Screen contentContainerStyle={styles.errorContainer}><Text style={styles.error}>{error ?? 'Bildirim bulunamadı.'}</Text><PrimaryButton label="Tekrar Dene" variant="secondary" onPress={() => { setLoading(true); setError(null); setRetryKey(value => value + 1); }} /></Screen>;
   return <Screen>
-    {!photoFailed ? <View style={styles.photoContainer}><Image source={{ uri: getReportPhotoUrl(report.id) }} style={styles.photo} contentFit="cover" onLoadStart={() => setPhotoLoading(true)} onLoad={() => setPhotoLoading(false)} onError={() => { setPhotoLoading(false); setPhotoFailed(true); }} accessibilityLabel="Bildirim fotoğrafı" />{photoLoading ? <ActivityIndicator accessibilityLabel="Fotoğraf yükleniyor" style={styles.photoLoader} color={colors.primary} /> : null}</View> : <View style={styles.photoFallback}><Text style={styles.muted}>Fotoğraf yüklenemedi.</Text></View>}
+    {!photoFailed && photoAccessToken ? <View style={styles.photoContainer}><Image source={getReportPhotoSource(report.id, photoAccessToken)} style={styles.photo} contentFit="cover" onLoadStart={() => setPhotoLoading(true)} onLoad={() => setPhotoLoading(false)} onError={() => { setPhotoLoading(false); setPhotoFailed(true); }} accessibilityLabel="Bildirim fotoğrafı" />{photoLoading ? <ActivityIndicator accessibilityLabel="Fotoğraf yükleniyor" style={styles.photoLoader} color={colors.primary} /> : null}</View> : <View style={styles.photoFallback}><Text style={styles.muted}>Fotoğraf yüklenemedi.</Text></View>}
     <View style={styles.card}>
       <Text style={styles.title}>{categoryLabel(report.categoryId)}</Text>
       <Field label="Durum" value={reportStatusLabel(report.status)} />

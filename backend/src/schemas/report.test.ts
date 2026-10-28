@@ -54,6 +54,15 @@ describe('report metadata', () => {
       .map(file => readFileSync(join(directory, file), 'utf8'));
     expect(migrations.flatMap(unsafeGrantRoles)).toEqual([]);
   });
+  it('ownership migration eski kayıtları sahipsiz bırakır ve istemciye doğrudan erişim vermeyi reddeder', () => {
+    const sql = readFileSync('../supabase/migrations/20261016000100_add_report_ownership.sql', 'utf8').toLowerCase();
+    expect(sql).toContain('add column owner_id uuid references auth.users(id)');
+    expect(sql).not.toContain('update public.reports set owner_id');
+    expect(sql).toContain('revoke all on table public.reports from anon, authenticated');
+    expect(sql).toContain('create policy reports_backend_only');
+    expect(sql).toContain('create policy report_images_backend_only');
+    expect((sql.match(/to public/g) ?? [])).toHaveLength(2);
+  });
   it('istemci rolü grant taraması çoklu, yorum sonrası, default privilege ve tırnaklı rolleri yakalar', () => {
     expect(unsafeGrantRoles('grant select on table public.reports to service_role, anon;')).toContain('anon');
     expect(unsafeGrantRoles('-- güvenli yorum\ngrant select on table public.reports to anon;')).toContain('anon');

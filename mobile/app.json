@@ -8,7 +8,13 @@
     "scheme": "kentbildir",
     "userInterfaceStyle": "light",
     "ios": {
-      "bundleIdentifier": "com.burakakblt.kentbildir"
+      "bundleIdentifier": "com.burakakblt.kentbildir",
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        },
+        "NSLocalNetworkUsageDescription": "KentBildir, geliştirme sunucusuna aynı yerel ağ üzerinden bağlanır."
+      }
     },
     "android": {
       "blockedPermissions": [
@@ -56,7 +62,8 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,

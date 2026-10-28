@@ -1,9 +1,10 @@
-import request from 'supertest';
+import supertest from 'supertest';
 import { ApiError } from '@google/genai';
 import { describe, expect, it, vi } from 'vitest';
-import { createApp } from '../app.js';
+import { createApp as createProductionApp } from '../app.js';
 import { imageAnalysisSchema } from '../schemas/analysis.js';
 import { InvalidAIOutputError, type AIProvider } from '../services/aiProvider.js';
+import type { AuthVerifier } from '../middleware/requireUser.js';
 
 const config = {
   SUPABASE_URL: 'https://example.supabase.co',
@@ -15,6 +16,17 @@ const config = {
   corsOrigins: [],
 };
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6ZQAAAABJRU5ErkJggg==', 'base64');
+const authVerifier: AuthVerifier = { getUser: async (token) => token === 'test-token' ? { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' } : null };
+function createApp(...args: Parameters<typeof createProductionApp>) { return createProductionApp(args[0], { ...args[1], authVerifier }); }
+function request(app: ReturnType<typeof createApp>) {
+  const agent = supertest(app) as any;
+  return new Proxy(agent, { get(target, property, receiver) {
+    const value = Reflect.get(target, property, receiver);
+    return typeof value === 'function' && ['get', 'post', 'put', 'patch', 'delete'].includes(String(property))
+      ? (...args: unknown[]) => value.apply(target, args).set('Authorization', 'Bearer test-token')
+      : value;
+  } });
+}
 
 function providerWith(analyzeImage: AIProvider['analyzeImage']): AIProvider {
   return { analyzeImage };

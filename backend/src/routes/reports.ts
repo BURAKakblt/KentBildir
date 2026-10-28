@@ -6,6 +6,7 @@ import { parseMetadata } from '../schemas/report.js';
 import type { EmailProvider } from '../services/emailProvider.js';
 import { deliverReportEmail, type EmailStatus } from '../services/emailService.js';
 import { ConflictError, createReport, FileValidationError, getReport, getReportPhoto, ReportPhotoDownloadError } from '../services/reportService.js';
+import { authenticatedUser } from '../middleware/requireUser.js';
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024, files: 1, fields: 1, parts: 2, fieldSize: 16 * 1024, fieldNameSize: 50, headerPairs: 50 } });
 const submissionDto = (report: Record<string, unknown>) => ({ id: report.id, status: report.status, created_at: report.created_at });
@@ -40,7 +41,7 @@ export function reportRoutes(db: Supabase, email: { enabled: boolean; provider: 
       if (Object.keys(req.body).length !== 1 || !Object.hasOwn(req.body, 'metadata')) { res.status(400).json({ error: 'Yalnızca metadata ve photo alanları kabul edilir.' }); return; }
       if (!req.file) { res.status(400).json({ error: 'Fotoğraf zorunludur.' }); return; }
       const meta = parseMetadata(req.body.metadata);
-      const result = await createReport(db, meta, req.file);
+      const result = await createReport(db, meta, req.file, authenticatedUser(res).id);
       const emailStatus = result.created ? await deliverReportEmail({ db, provider: email.provider, enabled: email.enabled, meta, image: result.image }) : persistedEmailStatus(result.report.email_status);
       res.status(result.created ? 201 : 200).json({ report: submissionDto(result.report), delivery: { emailStatus } });
     } catch (error) {
@@ -53,10 +54,10 @@ export function reportRoutes(db: Supabase, email: { enabled: boolean; provider: 
   router.get('/:id/photo', async (req, res, next) => {
     try {
       const id = z.uuid().parse(req.params.id);
-      const report = await getReport(db, id);
+      const report = await getReport(db, id, authenticatedUser(res).id);
       if (!report) { res.status(404).json({ error: 'Bildirim bulunamadı.' }); return; }
       const photo = await getReportPhoto(db, report.photo_path);
-      res.set('Content-Type', photo.mime).set('Cache-Control', 'private, max-age=300').send(photo.buffer);
+      res.set('Content-Type', photo.mime).set('Cache-Control', 'no-store').set('Vary', 'Authorization').send(photo.buffer);
     } catch (error) {
       if (error instanceof z.ZodError) { res.status(400).json({ error: 'Geçersiz ID.' }); return; }
       if (error instanceof ReportPhotoDownloadError) { res.status(502).json({ error: 'Bildirim fotoğrafı alınamadı.' }); return; }
@@ -65,9 +66,9 @@ export function reportRoutes(db: Supabase, email: { enabled: boolean; provider: 
   });
   router.get('/:id', async (req, res, next) => {
     try {
-      const report = await getReport(db, z.uuid().parse(req.params.id));
+      const report = await getReport(db, z.uuid().parse(req.params.id), authenticatedUser(res).id);
       if (!report) { res.status(404).json({ error: 'Bildirim bulunamadı.' }); return; }
-      res.json({ report: detailDto(report) });
+      res.set('Cache-Control', 'no-store').set('Vary', 'Authorization').json({ report: detailDto(report) });
     } catch (error) {
       if (error instanceof z.ZodError) { res.status(400).json({ error: 'Geçersiz ID.' }); return; }
       next(error);

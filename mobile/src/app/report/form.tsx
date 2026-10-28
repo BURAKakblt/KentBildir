@@ -10,6 +10,7 @@ import { Screen } from '@/components/Screen';
 import { ISSUE_CATEGORIES } from '@/constants/categories';
 import { getLocationAccuracyLevel } from '@/constants/location';
 import { colors, spacing } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 import { useReportDraft } from '@/context/ReportDraftContext';
 import { getCurrentReportLocation, getLocationPrecision, LocationTimeoutError } from '@/services/location';
 import { submitReport } from '@/services/api';
@@ -39,6 +40,7 @@ export default function ReportFormScreen() {
     setSelectedCategory,
     setSubmissionStatus,
   } = useReportDraft();
+  const { getAccessToken } = useAuth();
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState<LocationError>(null);
   const requestedLocation = useRef(false);
@@ -145,7 +147,7 @@ export default function ReportFormScreen() {
     if (submissionInFlight.current || draftLocked) return;
     submissionInFlight.current = true;
     setSubmissionStatus('submitting');
-    try { const result = await submitReport(draft); try { await addReportToHistory(result.report.id, result.report.created_at); } catch { if (__DEV__) console.warn('report_history_write_failed'); } setSubmissionStatus('submitted', result.report.id, result.emailStatus); router.replace('/report/success' as Href); }
+    try { const result = await submitReport(draft, await getAccessToken()); try { await addReportToHistory(result.report.id, result.report.created_at); } catch { if (__DEV__) console.warn('report_history_write_failed'); } setSubmissionStatus('submitted', result.report.id, result.emailStatus); router.replace('/report/success' as Href); }
     catch (error) { setSubmissionStatus('failed'); Alert.alert('Gönderilemedi', error instanceof Error ? error.message : 'Bildirim gönderilemedi. Taslağınız korundu.'); }
     finally { submissionInFlight.current = false; }
   }
