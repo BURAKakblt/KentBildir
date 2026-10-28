@@ -9,8 +9,8 @@
     "userInterfaceStyle": "light",
     "ios": {
       "bundleIdentifier": "com.burakakblt.kentbildir",
-      "buildNumber": "1",
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "NSAppTransportSecurity": {
           "NSAllowsLocalNetworking": true
         },
