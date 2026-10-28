@@ -18,7 +18,7 @@ export default function ReportLayout() {
         <Stack.Screen name="index" options={{ title: 'Sorun Bildir' }} />
         <Stack.Screen name="analysis" options={{ title: 'Analiz Sonucu' }} />
         <Stack.Screen name="form" options={{ title: 'Bildirim Formu' }} />
-        <Stack.Screen name="success" options={{ title: 'Bildirim Gönderildi', headerBackVisible: false }} />
+        <Stack.Screen name="success" options={{ title: 'Bildirim Sonucu', headerBackVisible: false, headerBackButtonMenuEnabled: false, gestureEnabled: false }} />
       </Stack>
     </ReportDraftProvider>
   );

@@ -3,10 +3,10 @@ import { ANALYSIS_TIMEOUT_MS, analyzePhoto } from '../../../mobile/src/services/
 import { createPhotoUpload } from '../../../mobile/src/services/photoUpload.ts';
 
 class FormDataStub {
-  entries: Array<[string, unknown]> = [];
+  entries: Array<[string, unknown, string | undefined]> = [];
 
-  append(name: string, value: unknown) {
-    this.entries.push([name, value]);
+  append(name: string, value: unknown, filename?: string) {
+    this.entries.push([name, value, filename]);
   }
 }
 
@@ -39,7 +39,7 @@ describe('mobile image analysis', () => {
       headers: { Authorization: 'Bearer test-token' },
     }));
     const form = fetchMock.mock.calls[0]?.[1]?.body as FormDataStub;
-    expect(form.entries).toEqual([['photo', { uri: 'file:///cache/opaque-name', name: 'analysis.png', type: 'image/png' }]]);
+    expect(form.entries).toEqual([['photo', expect.objectContaining({ uri: 'file:///cache/opaque-name', exists: true }), undefined]]);
   });
 
   it('rejects unsupported iPhone photo formats before uploading', async () => {
@@ -83,5 +83,12 @@ describe('mobile image analysis', () => {
     const expectation = expect(pending).rejects.toThrow('zaman aşımına uğradı');
     await vi.advanceTimersByTimeAsync(ANALYSIS_TIMEOUT_MS);
     await expectation;
+  });
+
+  it('does not expose a raw multipart implementation error', async () => {
+    process.env.EXPO_PUBLIC_API_URL = 'https://api.example.test';
+    vi.stubGlobal('FormData', FormDataStub);
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Unsupported FormDataPart implementation')));
+    await expect(analyzePhoto('file:///cache/photo.jpg', 'test-token', 'image/jpeg')).rejects.toThrow('Fotoğraf analiz için hazırlanamadı');
   });
 });

@@ -8,6 +8,13 @@ export interface PhotoUpload {
   type: SupportedPhotoMimeType;
 }
 
+export class PhotoValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PhotoValidationError';
+  }
+}
+
 const mimeByExtension: Record<string, SupportedPhotoMimeType> = {
   jpeg: 'image/jpeg',
   jpg: 'image/jpeg',
@@ -29,13 +36,13 @@ function supportedMimeType(value: string | null | undefined): SupportedPhotoMime
 export function createPhotoUpload(uri: string, mimeType: string | null | undefined, filenamePrefix: string): PhotoUpload {
   const detectedMimeType = supportedMimeType(mimeType);
   if (mimeType && !detectedMimeType) {
-    throw new Error('Fotoğraf JPEG, PNG veya WebP formatında olmalıdır.');
+    throw new PhotoValidationError('Fotoğraf JPEG, PNG veya WebP formatında olmalıdır.');
   }
 
   const extension = uri.split('?')[0]?.split('.').pop()?.toLowerCase();
   const inferredMimeType = extension ? mimeByExtension[extension] : undefined;
   const type = detectedMimeType ?? inferredMimeType;
-  if (!type) throw new Error('Fotoğraf formatı belirlenemedi. JPEG, PNG veya WebP formatında tekrar deneyin.');
+  if (!type) throw new PhotoValidationError('Fotoğraf formatı belirlenemedi. JPEG, PNG veya WebP formatında tekrar deneyin.');
 
   return { uri, name: `${filenamePrefix}.${extensionByMime[type]}`, type };
 }

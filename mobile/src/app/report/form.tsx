@@ -16,6 +16,7 @@ import { getCurrentReportLocation, getLocationPrecision, LocationTimeoutError } 
 import { submitReport } from '@/services/api';
 import { addReportToHistory } from '@/services/reportHistory';
 import { getDefaultDescription } from '@/services/description';
+import { getReportValidationIssues } from '@/services/reportValidation';
 import type { IssueCategoryId } from '@/types/report';
 
 type LocationError = 'permission_denied' | 'permission_blocked' | 'services_disabled' | 'timeout' | 'unavailable' | null;
@@ -119,16 +120,10 @@ export default function ReportFormScreen() {
 
   if (!draft.photoUri || !draft.selectedCategoryId) return null;
 
-  const descriptionLength = draft.description.trim().length;
-  const descriptionIsValid = descriptionLength >= 10 && descriptionLength <= 1000;
+  const descriptionLength = Array.from(draft.description.trim()).length;
   const otherCategoryIsValid = draft.selectedCategoryId !== 'other' || draft.description.trim() !== getDefaultDescription('other').trim();
-  const isValid = Boolean(
-    draft.photoUri
-      && draft.selectedCategoryId
-      && draft.location
-      && descriptionIsValid
-      && otherCategoryIsValid,
-  );
+  const validationIssues = getReportValidationIssues(draft);
+  const isValid = validationIssues.length === 0;
 
   function changeCategory(categoryId: IssueCategoryId) {
     setSelectedCategory(categoryId);
@@ -141,15 +136,27 @@ export default function ReportFormScreen() {
 
   async function finishDraft() {
     if (!isValid) {
-      Alert.alert('Eksik bilgiler', 'Fotoğraf, kategori, konum ve açıklama alanlarının tamamlandığından emin olun.');
+      Alert.alert('Eksik veya geçersiz bilgiler', `Lütfen şu alanları kontrol edin:\n\n${validationIssues.map((issue) => `• ${issue}`).join('\n')}`);
       return;
     }
     if (submissionInFlight.current || draftLocked) return;
     submissionInFlight.current = true;
     setSubmissionStatus('submitting');
-    try { const result = await submitReport(draft, await getAccessToken()); try { await addReportToHistory(result.report.id, result.report.created_at); } catch { if (__DEV__) console.warn('report_history_write_failed'); } setSubmissionStatus('submitted', result.report.id, result.emailStatus); router.replace('/report/success' as Href); }
-    catch (error) { setSubmissionStatus('failed'); Alert.alert('Gönderilemedi', error instanceof Error ? error.message : 'Bildirim gönderilemedi. Taslağınız korundu.'); }
-    finally { submissionInFlight.current = false; }
+    try {
+      const result = await submitReport(draft, await getAccessToken());
+      try {
+        await addReportToHistory(result.report.id, result.report.created_at);
+      } catch {
+        if (__DEV__) console.warn('report_history_write_failed');
+      }
+      setSubmissionStatus('submitted', result.report.id, result.emailStatus);
+      router.replace('/report/success' as Href);
+    } catch (error) {
+      setSubmissionStatus('failed');
+      Alert.alert('Gönderilemedi', error instanceof Error ? error.message : 'Bildirim gönderilemedi. Taslağınız korundu.');
+    } finally {
+      submissionInFlight.current = false;
+    }
   }
 
   return (
@@ -241,7 +248,12 @@ export default function ReportFormScreen() {
         <Text style={styles.previewValue}>{draft.description.trim() || 'Henüz girilmedi'}</Text>
       </View>
 
-      {!isValid ? <Text style={styles.validation}>Taslağı tamamlamak için fotoğraf, sorun türü, konum ve geçerli bir açıklama gereklidir.</Text> : null}
+      {!isValid ? (
+        <View accessibilityRole="alert" style={styles.validationBox}>
+          <Text style={styles.validationTitle}>Tamamlanması gereken alanlar</Text>
+          {validationIssues.map((issue) => <Text key={issue} style={styles.validation}>• {issue}</Text>)}
+        </View>
+      ) : null}
       <PrimaryButton label={draft.status === 'submitted' ? 'Bildirim Gönderildi' : 'Bildirimi Gönder'} loading={draft.status === 'submitting'} disabled={!isValid || draft.status === 'submitted'} onPress={() => void finishDraft()} />
     </Screen>
   );
@@ -275,5 +287,7 @@ const styles = StyleSheet.create({
   previewPhoto: { width: '100%', aspectRatio: 16 / 8, borderRadius: 12, backgroundColor: colors.border, marginBottom: spacing.sm },
   previewLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '700', marginTop: spacing.sm, textTransform: 'uppercase' },
   previewValue: { color: colors.text, fontSize: 15, lineHeight: 21 },
-  validation: { color: '#9B2C2C', fontSize: 13, lineHeight: 18, textAlign: 'center' },
+  validationBox: { backgroundColor: '#FFF1F1', borderColor: '#E6B8B8', borderWidth: 1, borderRadius: 14, padding: spacing.md, gap: spacing.xs },
+  validationTitle: { color: '#7D2525', fontSize: 14, lineHeight: 20, fontWeight: '800' },
+  validation: { color: '#7D2525', fontSize: 13, lineHeight: 19 },
 });

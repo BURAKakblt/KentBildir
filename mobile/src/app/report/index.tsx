@@ -110,7 +110,7 @@ export default function ReportScreen() {
             <Image source={{ uri: draft.photoUri }} style={styles.preview} contentFit="cover" accessibilityLabel="Seçilen sorun fotoğrafı" />
             <View style={styles.previewMeta}>
               <Text style={styles.sourceText}>{draft.photoSource === 'camera' ? 'Kamera ile çekildi' : 'Galeriden seçildi'}</Text>
-              <Pressable accessibilityRole="button" accessibilityLabel="Seçilen fotoğrafı kaldır" disabled={pickingSource !== null || draftLocked} onPress={() => void removePhoto()} hitSlop={8}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Seçilen fotoğrafı kaldır" disabled={pickingSource !== null || draftLocked} onPress={() => void removePhoto()} hitSlop={8} style={styles.removeButton}>
                 <Text style={styles.removeText}>Fotoğrafı Kaldır</Text>
               </Pressable>
             </View>
@@ -132,5 +132,6 @@ const styles = StyleSheet.create({
   preview: { width: '100%', aspectRatio: 4 / 3, borderRadius: 20, backgroundColor: colors.border },
   previewMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md, marginTop: spacing.sm },
   sourceText: { color: colors.textMuted, fontSize: 13 },
+  removeButton: { minHeight: 44, justifyContent: 'center' },
   removeText: { color: '#B33A3A', fontSize: 14, fontWeight: '700' },
 });

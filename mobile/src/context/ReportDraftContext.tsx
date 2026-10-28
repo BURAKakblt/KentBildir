@@ -1,7 +1,7 @@
 import * as Crypto from 'expo-crypto';
 import { createContext, type PropsWithChildren, useCallback, useContext, useMemo, useReducer } from 'react';
 
-import { getDefaultDescription } from '@/services/description';
+import { applyAnalysisResult, applyUserCategorySelection } from '@/services/reportDraftSelection';
 import type {
   AnalysisResult,
   EmailDeliveryStatus,
@@ -44,6 +44,7 @@ function createInitialDraft(): ReportDraft {
     photoSource: null,
     aiSuggestion: null,
     selectedCategoryId: null,
+    categorySelectionSource: null,
     location: null,
     description: '',
     descriptionEdited: false,
@@ -76,22 +77,11 @@ function reportDraftReducer(state: ReportDraft, action: ReportDraftAction): Repo
       return { ...state, status: 'analyzing' };
     case 'set_analysis_result':
       if (locked || state.photoUri !== action.payload.photoUri) return state;
-      const selectedCategoryId = state.selectedCategoryId ?? action.payload.result.suggestedCategoryId;
-      return {
-        ...state,
-        aiSuggestion: action.payload.result,
-        selectedCategoryId,
-        description: state.descriptionEdited
-          ? state.description
-          : getDefaultDescription(selectedCategoryId),
-        status: 'analyzed',
-      };
+      return applyAnalysisResult(state, action.payload.result);
     case 'set_selected_category':
       if (locked) return state;
       return {
-        ...state,
-        selectedCategoryId: action.payload,
-        description: state.descriptionEdited ? state.description : getDefaultDescription(action.payload),
+        ...applyUserCategorySelection(state, action.payload),
         status: editableStatus(state),
       };
     case 'set_location':
