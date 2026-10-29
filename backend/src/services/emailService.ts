@@ -11,38 +11,40 @@ const formatDate = (value: number) => new Intl.DateTimeFormat('tr-TR', {
   timeStyle: 'short',
   timeZone: 'Europe/Istanbul',
 }).format(new Date(value));
+const TEST_NOTICE = 'Bu ileti KentBildir’in test ortamı tarafından otomatik oluşturulmuş ve yalnızca tanımlı test adresine gönderilmiştir. Henüz herhangi bir belediyeye veya resmî kuruma iletilmemiştir.';
+const safeSubjectPart = (value: unknown) => shown(value).replace(/[\r\n]+/g, ' ').trim();
 
 export function buildReportEmail(meta: ReportMetadata, image: { buffer: Buffer; mime: string; ext: string }): ReportEmail {
   if (!Number.isFinite(meta.latitude) || !Number.isFinite(meta.longitude)) throw new Error('invalid_coordinates');
   const mapUrl = `https://www.google.com/maps?q=${encodeURIComponent(`${meta.latitude},${meta.longitude}`)}`;
+  const category = CATEGORY_LABELS[meta.categoryId];
+  const district = shown(meta.district ?? meta.subregion);
   const fields: Array<[string, unknown]> = [
-    ['Bildirim numarası', meta.id],
-    ['Kategori', CATEGORY_LABELS[meta.categoryId]],
-    ['Açıklama', meta.description],
-    ['Fotoğraf tarihi', formatDate(meta.capturedAt)],
+    ['Kategori', category],
+    ['Vatandaşın açıklaması', meta.description],
+    ['Bildirim tarihi ve saati', formatDate(meta.capturedAt)],
+    ['Takip numarası', meta.id],
     ['Açık adres', shown(meta.address)],
-    ['İl', shown(meta.city)],
-    ['İlçe', shown(meta.district ?? meta.subregion)],
-    ['Konum', `${meta.latitude}, ${meta.longitude}`],
-    ['Konum hassasiyeti', meta.accuracy === null ? shown(null) : `${meta.accuracy} m`],
+    ['İlçe / il', `${district} / ${shown(meta.city)}`],
+    ['Enlem', meta.latitude],
+    ['Boylam', meta.longitude],
+    ['AI önerisi', meta.aiCategoryId ? CATEGORY_LABELS[meta.aiCategoryId] : shown(null)],
+    ['AI güven skoru', meta.aiConfidence === null ? shown(null) : `%${Math.round(meta.aiConfidence * 100)}`],
   ];
-  if (meta.aiCategoryId) fields.push(
-    ['AI kategori önerisi', CATEGORY_LABELS[meta.aiCategoryId]],
-    ['Model güven skoru', meta.aiConfidence === null ? shown(null) : `%${Math.round(meta.aiConfidence * 100)}`],
-  );
   const text = [
-    'KentBildir test bildirimi',
+    'YENİ KENT BİLDİRİMİ',
+    'TEST BİLDİRİMİ',
     '',
     ...fields.map(([key, value]) => `${key}: ${shown(value)}`),
-    `Harita: ${mapUrl}`,
+    `Harita bağlantısı: ${mapUrl}`,
     '',
-    'Fotoğraf bu e-postaya güvenli ek olarak iliştirilmiştir.',
-    'Bu ileti yalnız yapılandırılmış KentBildir test alıcısına gönderilmiştir.',
+    'Bildirim fotoğrafı bu e-postaya dosya eki olarak iliştirilmiştir.',
+    '',
+    TEST_NOTICE,
   ].join('\n');
-  const htmlRows = fields.map(([key, value]) => `<tr><th align="left" style="padding:8px 12px;color:#52605c;border-bottom:1px solid #dde5e2;vertical-align:top">${escapeHtml(key)}</th><td style="padding:8px 12px;color:#17211f;border-bottom:1px solid #dde5e2">${escapeHtml(shown(value))}</td></tr>`).join('');
-  const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:680px;color:#17211f"><h1 style="color:#146c5a">KentBildir test bildirimi</h1><table style="width:100%;border-collapse:collapse;background:#fff;border:1px solid #dde5e2">${htmlRows}</table><p><a href="${escapeHtml(mapUrl)}" style="color:#146c5a;font-weight:700">Konumu haritada görüntüle</a></p><p>Fotoğraf bu e-postaya güvenli ek olarak iliştirilmiştir.</p><p style="color:#66736f;font-size:13px">Bu ileti yalnız yapılandırılmış KentBildir test alıcısına gönderilmiştir.</p></div>`;
-  const shortNumber = meta.id.slice(0, 8).toUpperCase();
-  return { subject: `[KentBildir] Test bildirimi #${shortNumber} — ${CATEGORY_LABELS[meta.categoryId]}`, text, html, attachment: { filename: `kentbildir-${meta.id}.${image.ext}`, content: image.buffer, contentType: image.mime } };
+  const htmlRows = fields.map(([key, value]) => `<tr><th align="left" style="width:38%;padding:12px 14px;color:#52605c;border-bottom:1px solid #dde5e2;vertical-align:top;font-size:14px">${escapeHtml(key)}</th><td style="padding:12px 14px;color:#17211f;border-bottom:1px solid #dde5e2;font-size:14px;line-height:1.5;word-break:break-word">${escapeHtml(shown(value))}</td></tr>`).join('');
+  const html = `<!doctype html><html lang="tr"><body style="margin:0;padding:0;background:#f3f7f5"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f7f5"><tr><td align="center" style="padding:24px 12px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:680px;background:#ffffff;border:1px solid #dce7e3;border-radius:18px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#17211f"><tr><td style="padding:28px 24px;background:#146c5a"><span style="display:inline-block;padding:6px 10px;border-radius:999px;background:#ffffff;color:#146c5a;font-size:12px;font-weight:800;letter-spacing:.5px">TEST BİLDİRİMİ</span><h1 style="margin:16px 0 0;color:#ffffff;font-size:28px;line-height:1.2">Yeni Kent Bildirimi</h1></td></tr><tr><td style="padding:24px"><p style="margin:0 0 18px;color:#52605c;font-size:15px;line-height:1.6">KentBildir test ortamında yeni bir bildirim kaydedildi. Bildirim ayrıntıları aşağıdadır.</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #dde5e2;border-radius:12px;border-collapse:separate;border-spacing:0;overflow:hidden">${htmlRows}</table><p style="margin:20px 0"><a href="${escapeHtml(mapUrl)}" style="display:inline-block;padding:12px 18px;border-radius:10px;background:#146c5a;color:#ffffff;text-decoration:none;font-weight:700">Konumu haritada görüntüle</a></p><p style="margin:0 0 18px;color:#52605c;font-size:14px;line-height:1.6">Bildirim fotoğrafı bu e-postaya dosya eki olarak iliştirilmiştir.</p><div style="padding:14px 16px;border-radius:10px;background:#eef7f3;color:#465550;font-size:13px;line-height:1.6">${escapeHtml(TEST_NOTICE)}</div></td></tr></table></td></tr></table></body></html>`;
+  return { subject: `[KentBildir Test] Yeni Bildirim – ${category} – ${safeSubjectPart(district)}`, text, html, attachment: { filename: `kentbildir-${meta.id}.${image.ext}`, content: image.buffer, contentType: image.mime } };
 }
 
 function safeErrorCode(error: unknown) {
