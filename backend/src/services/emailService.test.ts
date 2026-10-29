@@ -21,11 +21,13 @@ function fakeDb(updates: Array<Record<string, unknown>>, updateError: unknown = 
 describe('report email', () => {
   it('text, escaped HTML, safe attachment and encoded map link builds', () => {
     const email = buildReportEmail(meta, image);
-    expect(email.text).toContain('Kullanıcı açıklaması: <img');
+    expect(email.text).toContain('Açıklama: <img');
     expect(email.html).not.toContain('<img src=x');
     expect(email.html).toContain('&lt;img src=x onerror=&quot;secret&quot;&gt;');
     expect(email.text).toContain('https://www.google.com/maps?q=41.0082%2C28.9784');
-    expect(email.html).toContain('Kullanıcının seçtiği nihai kategori');
+    expect(email.html).toContain('Kategori');
+    expect(email.text).toContain('Fotoğraf bu e-postaya güvenli ek olarak iliştirilmiştir.');
+    expect(email.subject).toContain('Test bildirimi #11111111');
     expect(email.attachment).toEqual({ filename: `kentbildir-${meta.id}.png`, content: image.buffer, contentType: 'image/png' });
   });
 

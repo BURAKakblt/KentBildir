@@ -18,6 +18,7 @@ export function createSmtpEmailProvider(config: Config): EmailProvider {
       await transport.sendMail({
         from: { name: `${config.EMAIL_FROM_NAME || 'KentBildir'} Bildirim Sistemi`, address: config.EMAIL_FROM_ADDRESS },
         to: config.TEST_REPORT_RECIPIENT_EMAIL,
+        envelope: { from: config.EMAIL_FROM_ADDRESS, to: config.TEST_REPORT_RECIPIENT_EMAIL },
         subject: email.subject,
         text: email.text,
         html: email.html,

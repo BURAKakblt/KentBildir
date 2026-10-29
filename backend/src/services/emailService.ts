@@ -6,19 +6,43 @@ import type { EmailProvider, ReportEmail } from './emailProvider.js';
 export type EmailStatus = 'pending' | 'sent' | 'failed' | 'disabled';
 const escapeHtml = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!);
 const shown = (value: unknown) => value === null || value === undefined || value === '' ? 'Belirtilmedi' : String(value);
+const formatDate = (value: number) => new Intl.DateTimeFormat('tr-TR', {
+  dateStyle: 'long',
+  timeStyle: 'short',
+  timeZone: 'Europe/Istanbul',
+}).format(new Date(value));
 
 export function buildReportEmail(meta: ReportMetadata, image: { buffer: Buffer; mime: string; ext: string }): ReportEmail {
   if (!Number.isFinite(meta.latitude) || !Number.isFinite(meta.longitude)) throw new Error('invalid_coordinates');
   const mapUrl = `https://www.google.com/maps?q=${encodeURIComponent(`${meta.latitude},${meta.longitude}`)}`;
   const fields: Array<[string, unknown]> = [
-    ['Bildirim ID', meta.id], ['Kullanıcının seçtiği nihai kategori', CATEGORY_LABELS[meta.categoryId]], ['Kullanıcı açıklaması', meta.description],
-    ['Tarih', new Date(meta.capturedAt).toISOString()], ['Adres', shown(meta.address)], ['İl', shown(meta.city)], ['İlçe', shown(meta.district ?? meta.subregion)],
-    ['Latitude', meta.latitude], ['Longitude', meta.longitude], ['Konum hassasiyeti', meta.accuracy === null ? shown(null) : `${meta.accuracy} m`],
+    ['Bildirim numarası', meta.id],
+    ['Kategori', CATEGORY_LABELS[meta.categoryId]],
+    ['Açıklama', meta.description],
+    ['Fotoğraf tarihi', formatDate(meta.capturedAt)],
+    ['Açık adres', shown(meta.address)],
+    ['İl', shown(meta.city)],
+    ['İlçe', shown(meta.district ?? meta.subregion)],
+    ['Konum', `${meta.latitude}, ${meta.longitude}`],
+    ['Konum hassasiyeti', meta.accuracy === null ? shown(null) : `${meta.accuracy} m`],
   ];
-  if (meta.aiCategoryId) fields.push(['AI kategori tahmini', CATEGORY_LABELS[meta.aiCategoryId]], ['Model confidence', shown(meta.aiConfidence)]);
-  const text = `${fields.map(([key, value]) => `${key}: ${shown(value)}`).join('\n')}\nHarita: ${mapUrl}`;
-  const html = `<h1>KentBildir Bildirimi</h1><dl>${fields.map(([key, value]) => `<dt><strong>${escapeHtml(key)}</strong></dt><dd>${escapeHtml(shown(value))}</dd>`).join('')}</dl><p><a href="${escapeHtml(mapUrl)}">Haritada görüntüle</a></p>`;
-  return { subject: `[KentBildir] ${CATEGORY_LABELS[meta.categoryId]} Bildirimi`, text, html, attachment: { filename: `kentbildir-${meta.id}.${image.ext}`, content: image.buffer, contentType: image.mime } };
+  if (meta.aiCategoryId) fields.push(
+    ['AI kategori önerisi', CATEGORY_LABELS[meta.aiCategoryId]],
+    ['Model güven skoru', meta.aiConfidence === null ? shown(null) : `%${Math.round(meta.aiConfidence * 100)}`],
+  );
+  const text = [
+    'KentBildir test bildirimi',
+    '',
+    ...fields.map(([key, value]) => `${key}: ${shown(value)}`),
+    `Harita: ${mapUrl}`,
+    '',
+    'Fotoğraf bu e-postaya güvenli ek olarak iliştirilmiştir.',
+    'Bu ileti yalnız yapılandırılmış KentBildir test alıcısına gönderilmiştir.',
+  ].join('\n');
+  const htmlRows = fields.map(([key, value]) => `<tr><th align="left" style="padding:8px 12px;color:#52605c;border-bottom:1px solid #dde5e2;vertical-align:top">${escapeHtml(key)}</th><td style="padding:8px 12px;color:#17211f;border-bottom:1px solid #dde5e2">${escapeHtml(shown(value))}</td></tr>`).join('');
+  const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:680px;color:#17211f"><h1 style="color:#146c5a">KentBildir test bildirimi</h1><table style="width:100%;border-collapse:collapse;background:#fff;border:1px solid #dde5e2">${htmlRows}</table><p><a href="${escapeHtml(mapUrl)}" style="color:#146c5a;font-weight:700">Konumu haritada görüntüle</a></p><p>Fotoğraf bu e-postaya güvenli ek olarak iliştirilmiştir.</p><p style="color:#66736f;font-size:13px">Bu ileti yalnız yapılandırılmış KentBildir test alıcısına gönderilmiştir.</p></div>`;
+  const shortNumber = meta.id.slice(0, 8).toUpperCase();
+  return { subject: `[KentBildir] Test bildirimi #${shortNumber} — ${CATEGORY_LABELS[meta.categoryId]}`, text, html, attachment: { filename: `kentbildir-${meta.id}.${image.ext}`, content: image.buffer, contentType: image.mime } };
 }
 
 function safeErrorCode(error: unknown) {
