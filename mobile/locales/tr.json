@@ -1,0 +1,9 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "KentBildir",
+    "NSCameraUsageDescription": "KentBildir, sorun fotoğrafı çekebilmeniz için kameranıza erişir.",
+    "NSPhotoLibraryUsageDescription": "KentBildir, sorun fotoğrafı seçebilmeniz için fotoğraflarınıza erişir.",
+    "NSLocationWhenInUseUsageDescription": "KentBildir, bildirilen sorunun yerini belirlemek için konumunuza erişir.",
+    "NSMotionUsageDescription": "KentBildir, bildirim konumunu belirleme özelliğini desteklemek için cihaz hareket etkinliği verisine erişebilir."
+  }
+}

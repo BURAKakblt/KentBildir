@@ -4,10 +4,14 @@ import type { EmailDeliveryStatus, IssueCategoryId } from '../types/report';
 export function categoryLabel(id: IssueCategoryId | null) { return ISSUE_CATEGORIES.find(category => category.id === id)?.label ?? 'Kategori bilinmiyor'; }
 export function reportStatusLabel(status: string) { return REPORT_STATUSES.find(item => item.id === status)?.label ?? 'Güncel durum bilinmiyor'; }
 export function emailStatusLabel(status: EmailDeliveryStatus) {
-  if (status === 'sent') return 'E-posta iletildi';
-  if (status === 'failed') return 'E-posta iletimi tamamlanamadı';
-  if (status === 'pending') return 'E-posta iletim durumu bekleniyor';
-  return 'E-posta iletimi devre dışı';
+  if (status === 'sent') return 'Gönderildi';
+  if (status === 'failed') return 'Gönderilemedi';
+  if (status === 'pending') return 'E-posta iletimi bekleniyor';
+  return 'E-posta iletimi kapalı';
+}
+
+export function formatReportNumber(id: string) {
+  return `#${id.slice(0, 8).toUpperCase()}`;
 }
 
 export function formatReportDate(value: string) {

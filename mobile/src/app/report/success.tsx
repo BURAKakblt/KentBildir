@@ -6,7 +6,7 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import { colors, spacing } from '@/constants/theme';
 import { useReportDraft } from '@/context/ReportDraftContext';
-import { emailStatusLabel } from '@/services/reportPresentation';
+import { emailStatusLabel, formatReportNumber } from '@/services/reportPresentation';
 
 export default function SuccessScreen() {
   const { draft, resetDraft } = useReportDraft();
@@ -46,9 +46,10 @@ export default function SuccessScreen() {
     <Screen contentContainerStyle={styles.container}>
       <View style={styles.card} accessibilityRole="summary">
         <Text style={styles.title}>Bildirim başarıyla kaydedildi</Text>
-        <Text style={styles.emailStatus}>{emailMessage}</Text>
+        <View style={styles.statusRow}><Text style={styles.statusLabel}>Kayıt durumu</Text><Text style={styles.statusValue}>Kaydedildi</Text></View>
+        <View style={styles.statusRow}><Text style={styles.statusLabel}>E-posta iletim durumu</Text><Text style={styles.statusValue}>{emailMessage}</Text></View>
         <Text style={styles.label}>Bildirim numarası</Text>
-        <Text selectable style={styles.id}>{shownReportId}</Text>
+        <Text selectable style={styles.id}>{formatReportNumber(shownReportId)}</Text>
       </View>
 
       <View style={styles.actions}>
@@ -68,7 +69,9 @@ const styles = StyleSheet.create({
   container: { justifyContent: 'center', gap: spacing.lg },
   card: { backgroundColor: colors.successSoft, borderRadius: 20, padding: spacing.lg, gap: spacing.sm },
   title: { color: colors.text, fontSize: 22, fontWeight: '800' },
-  emailStatus: { color: colors.text, fontSize: 15, lineHeight: 22 },
+  statusRow: { backgroundColor: colors.surface, borderRadius: 12, padding: spacing.md, gap: spacing.xs },
+  statusLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '700' },
+  statusValue: { color: colors.text, fontSize: 15, lineHeight: 22, fontWeight: '700' },
   label: { color: colors.textMuted, fontSize: 13, marginTop: spacing.sm },
   id: { color: colors.text, fontSize: 14, fontWeight: '700' },
   actions: { gap: spacing.sm },

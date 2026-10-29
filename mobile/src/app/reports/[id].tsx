@@ -4,10 +4,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, StyleSheet, Text, View } from 'react-native';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
+import { SectionHeader } from '@/components/SectionHeader';
 import { colors, spacing } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { getReport, getReportPhotoSource, type ReportDetail } from '@/services/api';
-import { categoryLabel, createReportMapUrl, emailStatusLabel, formatReportDate, reportStatusLabel } from '@/services/reportPresentation';
+import { categoryLabel, createReportMapUrl, emailStatusLabel, formatReportDate, formatReportNumber, reportStatusLabel } from '@/services/reportPresentation';
 
 function Field({ label, value }: { label: string; value: string }) { return <View style={styles.field}><Text style={styles.label}>{label}</Text><Text selectable style={styles.value}>{value}</Text></View>; }
 
@@ -27,26 +28,43 @@ export default function ReportDetailScreen() {
   async function openMap() { if (!mapUrl) return; try { await Linking.openURL(mapUrl); } catch { Alert.alert('Harita açılamadı', 'Harita uygulaması şu anda açılamıyor. Lütfen tekrar deneyin.'); } }
   if (loading) return <Screen><ActivityIndicator style={styles.loading} color={colors.primary} /></Screen>;
   if (!report) return <Screen contentContainerStyle={styles.errorContainer}><Text style={styles.error}>{error ?? 'Bildirim bulunamadı.'}</Text><PrimaryButton label="Tekrar Dene" variant="secondary" onPress={() => { setLoading(true); setError(null); setRetryKey(value => value + 1); }} /></Screen>;
-  return <Screen>
+  return <Screen contentContainerStyle={styles.container}>
+    <SectionHeader title="Bildirim Detayı" description={`${formatReportNumber(report.id)} numaralı kaydınızın güncel bilgileri.`} />
     {!photoFailed && photoAccessToken ? <View style={styles.photoContainer}><Image source={getReportPhotoSource(report.id, photoAccessToken)} style={styles.photo} contentFit="cover" onLoadStart={() => setPhotoLoading(true)} onLoad={() => setPhotoLoading(false)} onError={() => { setPhotoLoading(false); setPhotoFailed(true); }} accessibilityLabel="Bildirim fotoğrafı" />{photoLoading ? <ActivityIndicator accessibilityLabel="Fotoğraf yükleniyor" style={styles.photoLoader} color={colors.primary} /> : null}</View> : <View style={styles.photoFallback}><Text style={styles.muted}>Fotoğraf yüklenemedi.</Text></View>}
+    <View style={styles.statusGrid}>
+      <View style={styles.statusCard}><Text style={styles.statusLabel}>Kayıt durumu</Text><Text style={styles.statusValue}>{reportStatusLabel(report.status)}</Text></View>
+      <View style={styles.statusCard}><Text style={styles.statusLabel}>E-posta iletim durumu</Text><Text style={styles.statusValue}>{emailStatusLabel(report.emailStatus)}</Text></View>
+    </View>
     <View style={styles.card}>
+      <Text style={styles.cardHeading}>Kategori</Text>
       <Text style={styles.title}>{categoryLabel(report.categoryId)}</Text>
-      <Field label="Durum" value={reportStatusLabel(report.status)} />
-      <Field label="E-posta" value={emailStatusLabel(report.emailStatus)} />
-      <Field label="Açıklama" value={report.description} />
-      <Field label="Tarih" value={formatReportDate(report.capturedAt)} />
-      <Field label="Adres" value={report.address ?? 'Belirtilmedi'} />
+      {report.aiCategoryId ? <Field label="AI önerisi" value={`${categoryLabel(report.aiCategoryId)}${report.aiConfidence === null || !Number.isFinite(report.aiConfidence) ? '' : ` · güven skoru %${Math.round(report.aiConfidence * 100)}`}`} /> : null}
+    </View>
+    <View style={styles.card}>
+      <Text style={styles.cardHeading}>Açıklama</Text>
+      <Text selectable style={styles.description}>{report.description}</Text>
+    </View>
+    <View style={styles.card}>
+      <Text style={styles.cardHeading}>Tarih ve konum</Text>
+      <Field label="Fotoğraf tarihi" value={formatReportDate(report.capturedAt)} />
+      <Field label="Açık adres" value={report.address ?? 'Belirtilmedi'} />
       <Field label="İl / İlçe" value={[report.city, report.district ?? report.subregion].filter(Boolean).join(' / ') || 'Belirtilmedi'} />
-      <Field label="Koordinatlar" value={Number.isFinite(report.latitude) && Number.isFinite(report.longitude) ? `${report.latitude}, ${report.longitude}` : 'Belirtilmedi'} />
-      <Field label="Konum hassasiyeti" value={report.accuracy === null || !Number.isFinite(report.accuracy) ? 'Belirtilmedi' : `${report.accuracy} m (${report.locationPrecision === 'precise' ? 'kesin' : 'yaklaşık'})`} />
-      {report.aiCategoryId ? <Field label="AI önerisi" value={`${categoryLabel(report.aiCategoryId)}${report.aiConfidence === null || !Number.isFinite(report.aiConfidence) ? '' : ` — Model güven skoru: %${Math.round(report.aiConfidence * 100)}`}`} /> : null}
-      <Field label="Bildirim ID" value={report.id} />
+      <Field label="Konum doğruluğu" value={report.accuracy === null || !Number.isFinite(report.accuracy) ? 'Belirtilmedi' : `${Math.round(report.accuracy)} m · ${report.locationPrecision === 'precise' ? 'kesin konum' : 'yaklaşık konum'}`} />
     </View>
     {mapUrl ? <PrimaryButton label="Haritada Aç" variant="secondary" onPress={() => void openMap()} /> : null}
   </Screen>;
 }
 
 const styles = StyleSheet.create({
-  loading: { marginTop: spacing.xl }, errorContainer: { justifyContent: 'center', gap: spacing.lg }, error: { color: colors.textMuted, textAlign: 'center' }, photoContainer: { width: '100%', aspectRatio: 4 / 3, borderRadius: 20, overflow: 'hidden', backgroundColor: colors.border }, photo: { width: '100%', height: '100%' }, photoLoader: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }, photoFallback: { width: '100%', aspectRatio: 4 / 3, borderRadius: 20, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, alignItems: 'center', justifyContent: 'center' }, muted: { color: colors.textMuted },
-  card: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 20, padding: spacing.lg, gap: spacing.md, marginVertical: spacing.lg }, title: { color: colors.text, fontSize: 22, fontWeight: '800' }, field: { gap: spacing.xs }, label: { color: colors.textMuted, fontSize: 12, fontWeight: '700' }, value: { color: colors.text, fontSize: 15, lineHeight: 22 },
+  container: { gap: spacing.md, paddingBottom: spacing.xl },
+  loading: { marginTop: spacing.xl }, errorContainer: { justifyContent: 'center', gap: spacing.lg }, error: { color: colors.textMuted, textAlign: 'center' }, photoContainer: { width: '100%', aspectRatio: 4 / 3, borderRadius: 20, overflow: 'hidden', backgroundColor: colors.border, marginTop: spacing.sm }, photo: { width: '100%', height: '100%' }, photoLoader: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }, photoFallback: { width: '100%', aspectRatio: 4 / 3, borderRadius: 20, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm }, muted: { color: colors.textMuted },
+  statusGrid: { gap: spacing.sm },
+  statusCard: { backgroundColor: colors.primarySoft, borderRadius: 16, padding: spacing.md, gap: spacing.xs },
+  statusLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '700' },
+  statusValue: { color: colors.primary, fontSize: 16, fontWeight: '800' },
+  card: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 20, padding: spacing.lg, gap: spacing.md },
+  cardHeading: { color: colors.text, fontSize: 17, fontWeight: '800' },
+  title: { color: colors.text, fontSize: 22, fontWeight: '800' },
+  description: { color: colors.text, fontSize: 16, lineHeight: 24 },
+  field: { gap: spacing.xs }, label: { color: colors.textMuted, fontSize: 12, fontWeight: '700' }, value: { color: colors.text, fontSize: 15, lineHeight: 22 },
 });

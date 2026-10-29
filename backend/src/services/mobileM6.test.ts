@@ -43,10 +43,10 @@ describe('mobile M6 services', () => {
   it('uses safe status and all email labels', () => {
     expect(reportStatusLabel('failed')).toBe('Gönderilemedi');
     expect(reportStatusLabel('unexpected')).toBe('Güncel durum bilinmiyor');
-    expect(emailStatusLabel('sent')).toBe('E-posta iletildi');
-    expect(emailStatusLabel('failed')).toBe('E-posta iletimi tamamlanamadı');
-    expect(emailStatusLabel('pending')).toBe('E-posta iletim durumu bekleniyor');
-    expect(emailStatusLabel('disabled')).toBe('E-posta iletimi devre dışı');
+    expect(emailStatusLabel('sent')).toBe('Gönderildi');
+    expect(emailStatusLabel('failed')).toBe('Gönderilemedi');
+    expect(emailStatusLabel('pending')).toBe('E-posta iletimi bekleniyor');
+    expect(emailStatusLabel('disabled')).toBe('E-posta iletimi kapalı');
   });
 
   it('limits history and filters malformed array items', async () => {

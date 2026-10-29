@@ -18,7 +18,7 @@ export default function RootLayout() {
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="report" options={{ headerShown: false }} />
-        <Stack.Screen name="reports" options={{ title: 'Bildirimlerim' }} />
+        <Stack.Screen name="reports" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="dark" />
     </AuthProvider>

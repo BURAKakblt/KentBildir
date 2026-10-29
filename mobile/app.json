@@ -11,6 +11,11 @@
       "bundleIdentifier": "com.burakakblt.kentbildir",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleDevelopmentRegion": "tr",
+        "CFBundleLocalizations": [
+          "tr"
+        ],
+        "CFBundleAllowMixedLocalizations": true,
         "NSAppTransportSecurity": {
           "NSAllowsLocalNetworking": true
         },
@@ -36,6 +41,9 @@
     "web": {
       "output": "static",
       "favicon": "./assets/images/favicon.png"
+    },
+    "locales": {
+      "tr": "./locales/tr.json"
     },
     "plugins": [
       "expo-router",

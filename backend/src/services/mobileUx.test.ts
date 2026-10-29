@@ -57,8 +57,8 @@ describe('mobile submission UX', () => {
   });
 
   it('e-posta durumunu kayıt durumundan ayrı ve doğru ifade eder', () => {
-    expect(emailStatusLabel('disabled')).toBe('E-posta iletimi devre dışı');
-    expect(emailStatusLabel('failed')).toBe('E-posta iletimi tamamlanamadı');
-    expect(emailStatusLabel('sent')).toBe('E-posta iletildi');
+    expect(emailStatusLabel('disabled')).toBe('E-posta iletimi kapalı');
+    expect(emailStatusLabel('failed')).toBe('Gönderilemedi');
+    expect(emailStatusLabel('sent')).toBe('Gönderildi');
   });
 });

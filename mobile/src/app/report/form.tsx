@@ -153,7 +153,7 @@ export default function ReportFormScreen() {
       router.replace('/report/success' as Href);
     } catch (error) {
       setSubmissionStatus('failed');
-      Alert.alert('Gönderilemedi', error instanceof Error ? error.message : 'Bildirim gönderilemedi. Taslağınız korundu.');
+      Alert.alert('Kaydedilemedi', error instanceof Error ? error.message : 'Bildirim kaydedilemedi. Taslağınız korundu.');
     } finally {
       submissionInFlight.current = false;
     }
@@ -254,7 +254,7 @@ export default function ReportFormScreen() {
           {validationIssues.map((issue) => <Text key={issue} style={styles.validation}>• {issue}</Text>)}
         </View>
       ) : null}
-      <PrimaryButton label={draft.status === 'submitted' ? 'Bildirim Gönderildi' : 'Bildirimi Gönder'} loading={draft.status === 'submitting'} disabled={!isValid || draft.status === 'submitted'} onPress={() => void finishDraft()} />
+      <PrimaryButton label={draft.status === 'submitted' ? 'Bildirim Kaydedildi' : 'Bildirimi Gönder'} loading={draft.status === 'submitting'} disabled={!isValid || draft.status === 'submitted'} onPress={() => void finishDraft()} />
     </Screen>
   );
 }
