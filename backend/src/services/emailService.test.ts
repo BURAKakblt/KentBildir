@@ -76,6 +76,18 @@ describe('report email', () => {
     expect(updates[0].email_sent_at).toEqual(expect.any(String));
   });
 
+  it('logs only a short safe Resend message identifier after success', async () => {
+    const updates: Array<Record<string, unknown>> = [];
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    try {
+      const provider: EmailProvider = { sendReportEmail: vi.fn().mockResolvedValue({ provider: 'resend', messageId: '12345678-aaaa-bbbb-cccc-secret-tail' }) };
+      expect(await deliverReportEmail({ db: fakeDb(updates), provider, enabled: true, meta, image })).toBe('sent');
+      expect(log).toHaveBeenCalledWith('email_delivery_sent', { provider: 'resend', messageIdShort: '12345678' });
+      expect(JSON.stringify(log.mock.calls)).not.toContain('secret-tail');
+      expect(JSON.stringify(log.mock.calls)).not.toContain(meta.description);
+    } finally { log.mockRestore(); }
+  });
+
   it('disabled does not call provider and records disabled', async () => {
     const updates: Array<Record<string, unknown>> = [];
     const provider: EmailProvider = { sendReportEmail: vi.fn() };

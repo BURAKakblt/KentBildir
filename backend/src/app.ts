@@ -11,6 +11,7 @@ import type { AIProvider } from './services/aiProvider.js';
 import type { EmailProvider } from './services/emailProvider.js';
 import { createGeminiProvider } from './services/geminiProvider.js';
 import { createSmtpEmailProvider } from './services/smtpEmailProvider.js';
+import { createResendEmailProvider } from './services/resendEmailProvider.js';
 import { createAuthVerifier, requireUser, type AuthVerifier } from './middleware/requireUser.js';
 
 class CorsError extends Error {}
@@ -20,7 +21,11 @@ export function createApp(config: Config, dependencies: { aiProvider?: AIProvide
   const app = express();
   const db = dependencies.db ?? createSupabase(config);
   const aiProvider = dependencies.aiProvider !== undefined ? dependencies.aiProvider : config.GEMINI_API_KEY ? createGeminiProvider(config.GEMINI_API_KEY, config.GEMINI_VISION_MODEL) : null;
-  const emailProvider = dependencies.emailProvider !== undefined ? dependencies.emailProvider : config.EMAIL_ENABLED ? createSmtpEmailProvider(config) : null;
+  const emailProvider = dependencies.emailProvider !== undefined
+    ? dependencies.emailProvider
+    : config.EMAIL_ENABLED
+      ? config.EMAIL_PROVIDER === 'resend' ? createResendEmailProvider(config) : createSmtpEmailProvider(config)
+      : null;
   const authVerifier = dependencies.authVerifier ?? createAuthVerifier(db);
   app.disable('x-powered-by');
   if (config.NODE_ENV === 'production') app.set('trust proxy', 1);

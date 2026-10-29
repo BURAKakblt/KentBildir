@@ -24,6 +24,7 @@ export function createSmtpEmailProvider(config: Config): EmailProvider {
         html: email.html,
         attachments: [email.attachment],
       });
+      return { provider: 'smtp' } as const;
     },
   };
 }

@@ -33,6 +33,7 @@ const detailDto = (report: Record<string, unknown>) => ({
   createdAt: report.created_at,
 });
 const persistedEmailStatus = (value: unknown): EmailStatus => value === 'pending' || value === 'sent' || value === 'failed' || value === 'disabled' ? value : 'pending';
+const extensionByMime: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 
 export function reportRoutes(db: Supabase, email: { enabled: boolean; provider: EmailProvider | null } = { enabled: false, provider: null }) {
   const router = Router();
@@ -42,7 +43,18 @@ export function reportRoutes(db: Supabase, email: { enabled: boolean; provider: 
       if (!req.file) { res.status(400).json({ error: 'Fotoğraf zorunludur.' }); return; }
       const meta = parseMetadata(req.body.metadata);
       const result = await createReport(db, meta, req.file, authenticatedUser(res).id);
-      const emailStatus = result.created ? await deliverReportEmail({ db, provider: email.provider, enabled: email.enabled, meta, image: result.image }) : persistedEmailStatus(result.report.email_status);
+      const emailStatus = result.created ? await deliverReportEmail({
+        db,
+        provider: email.provider,
+        enabled: email.enabled,
+        meta,
+        image: async () => {
+          const stored = await getReportPhoto(db, String(result.report.photo_path));
+          const ext = extensionByMime[stored.mime];
+          if (!ext) throw Object.assign(new Error('Stored photo type invalid'), { code: 'STORED_PHOTO_TYPE_INVALID' });
+          return { ...stored, ext };
+        },
+      }) : persistedEmailStatus(result.report.email_status);
       res.status(result.created ? 201 : 200).json({ report: submissionDto(result.report), delivery: { emailStatus } });
     } catch (error) {
       if (error instanceof z.ZodError) { res.status(400).json({ error: 'Geçersiz metadata.', issues: error.issues }); return; }

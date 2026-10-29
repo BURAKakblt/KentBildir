@@ -26,6 +26,7 @@ function metadata() { return { id: '22222222-2222-4222-8222-222222222222', categ
 
 function memoryDb(failUpdates = false) {
   let row: Record<string, unknown> | null = null;
+  let storedPhoto: Blob | null = null;
   const select = () => {
     const filters: Record<string, unknown> = {};
     const query = {
@@ -35,7 +36,11 @@ function memoryDb(failUpdates = false) {
     return query;
   };
   const db = {
-    storage: { from: () => ({ upload: async () => ({ error: null }), remove: async () => ({ error: null }) }) },
+    storage: { from: () => ({
+      upload: async (_path: string, content: Buffer, options: { contentType?: string }) => { storedPhoto = new Blob([content], { type: options.contentType }); return { error: null }; },
+      download: async () => ({ data: storedPhoto, error: storedPhoto ? null : new Error('missing') }),
+      remove: async () => ({ error: null }),
+    }) },
     from: () => ({
       select,
       insert: (value: Record<string, unknown>) => ({ select: () => ({ single: async () => { row = { ...value, created_at: new Date().toISOString(), email_status: 'pending', email_attempt_count: 0 }; return { data: row, error: null }; } }) }),
@@ -62,6 +67,7 @@ describe('POST /api/reports email delivery', () => {
     expect(sendReportEmail).toHaveBeenCalledOnce();
     const email = sendReportEmail.mock.calls[0][0];
     expect(email.attachment.filename).toBe(`kentbildir-${metadata().id}.png`);
+    expect(email.attachment.content).toEqual(png);
     expect(JSON.stringify(email)).not.toContain('attacker@example.com');
   });
 

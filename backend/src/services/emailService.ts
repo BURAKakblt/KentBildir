@@ -4,6 +4,7 @@ import type { ReportMetadata } from '../schemas/report.js';
 import type { EmailProvider, ReportEmail } from './emailProvider.js';
 
 export type EmailStatus = 'pending' | 'sent' | 'failed' | 'disabled';
+type EmailImage = { buffer: Buffer; mime: string; ext: string };
 const escapeHtml = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!);
 const shown = (value: unknown) => value === null || value === undefined || value === '' ? 'Belirtilmedi' : String(value);
 const formatDate = (value: number) => new Intl.DateTimeFormat('tr-TR', {
@@ -52,12 +53,18 @@ function safeErrorCode(error: unknown) {
   return typeof code === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(code) ? code : 'email_provider_error';
 }
 
+function safeMessageIdShort(value: string | undefined) {
+  if (!value) return undefined;
+  const safe = value.replace(/[^A-Za-z0-9_-]/g, '');
+  return safe.length >= 8 ? safe.slice(0, 8) : undefined;
+}
+
 async function updateDelivery(db: Supabase, id: string, values: Record<string, unknown>) {
   const result = await db.from('reports').update(values).eq('id', id);
   if (result.error) throw result.error;
 }
 
-export async function deliverReportEmail(options: { db: Supabase; provider: EmailProvider | null; enabled: boolean; meta: ReportMetadata; image: { buffer: Buffer; mime: string; ext: string } }): Promise<EmailStatus> {
+export async function deliverReportEmail(options: { db: Supabase; provider: EmailProvider | null; enabled: boolean; meta: ReportMetadata; image: EmailImage | (() => Promise<EmailImage>) }): Promise<EmailStatus> {
   const { db, provider, enabled, meta, image } = options;
   if (!enabled) {
     try { await updateDelivery(db, meta.id, { email_status: 'disabled' }); } catch (error) { console.warn('email_status_update_failed', { reportId: meta.id, code: safeErrorCode(error) }); }
@@ -65,7 +72,10 @@ export async function deliverReportEmail(options: { db: Supabase; provider: Emai
   }
   try {
     if (!provider) throw Object.assign(new Error('provider unavailable'), { code: 'provider_unavailable' });
-    await provider.sendReportEmail(buildReportEmail(meta, image));
+    const storedImage = typeof image === 'function' ? await image() : image;
+    const receipt = await provider.sendReportEmail(buildReportEmail(meta, storedImage));
+    const messageIdShort = safeMessageIdShort(receipt?.provider === 'resend' ? receipt.messageId : undefined);
+    if (messageIdShort) console.log('email_delivery_sent', { provider: 'resend', messageIdShort });
   } catch (error) {
     const code = safeErrorCode(error);
     console.warn('email_delivery_failed', { reportId: meta.id, code, kind: error instanceof Error ? error.constructor.name : 'Unknown', responseCode: typeof (error as { responseCode?: unknown }).responseCode === 'number' ? (error as { responseCode: number }).responseCode : undefined });
